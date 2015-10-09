@@ -1,6 +1,4 @@
 from fuglu.shared import Suspect,AppenderPlugin,actioncode_to_string,apply_template
-import time
-import shutil
 import fuglu.extensions.sql
 import re
 import string
@@ -78,7 +76,7 @@ class SQLRunner(AppenderPlugin):
                 result=session.execute(replaced)
             except Exception,e:
                 self.logger.error("Statement failed: statement=%s , error=%s"%(replaced,str(e)))
-        session.remove();
+        session.remove()
 
 
     def stripAddress(self,address):
@@ -122,5 +120,5 @@ class SQLRunner(AppenderPlugin):
             print "Database Connection failed: %s"%e
             return False
         
-        session.remove();
+        session.remove()
         return True    

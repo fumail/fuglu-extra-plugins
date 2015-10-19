@@ -1,6 +1,6 @@
 import time
 from threading import Lock
-from fuglu.shared import ScannerPlugin,REJECT, DUNNO,DEFER, string_to_actioncode, SuspectFilter, apply_template
+from fuglu.shared import ScannerPlugin, DUNNO, string_to_actioncode, SuspectFilter, apply_template
 from fuglu.extensions.sql import ENABLED as SQLALCHEMY_AVAILABLE, get_session
 import re
 import os
@@ -116,10 +116,10 @@ if REDIS_AVAILABLE:
     AVAILABLE_RATELIMIT_BACKENDS['redis']=RedisBackend
 
 if SQLALCHEMY_AVAILABLE:
-    from sqlalchemy import Table, Column, TEXT, TIMESTAMP, Integer, String, MetaData, ForeignKey, Unicode, Boolean, DateTime, select,BigInteger, Index
+    from sqlalchemy import Table, Column, Integer,  Unicode,BigInteger, Index
     from sqlalchemy.sql import and_
     from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import mapper, relation, column_property, object_session
+    from sqlalchemy.orm import mapper
     DeclarativeBase = declarative_base()
     metadata = DeclarativeBase.metadata
 

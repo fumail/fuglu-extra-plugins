@@ -162,7 +162,10 @@ Tags:
 
     def _parse_result(self, status,out,err):
         dr = {}
-        for result in re.finditer(self.config.get(self.section,'viruspattern'),out,re.MULTILINE):
+        pattern=self.config.get(self.section,'viruspattern')
+        if pattern=='': #TODO: maybe in the future we need to support based on exit status
+            return None
+        for result in re.finditer(pattern,out,re.MULTILINE):
             gdic=result.groupdict()
             if 'filename' in gdic:
                 filename=gdic['filename']
@@ -251,7 +254,7 @@ class CMDLineAVClam(CMDLineAVGeneric):
         CMDLineAVGeneric.__init__(self, config, section)
         self.logger=self._logger()
         self.requiredvars['identifier']={
-                'default': 'CommandlineClam',
+                'default': 'ClamAV',
                 'description': 'identifier used in the virus tag',
             }
 
@@ -262,6 +265,29 @@ class CMDLineAVClam(CMDLineAVGeneric):
 
         self.requiredvars['viruspattern']= {
                 'default': r'^(?P<filename>[^\:]+)\: (?P<virusname>.+) FOUND$',
+                'description': 'regular expression for infected messages. use virusname and filename groups',
+            }
+
+    def __str__(self):
+        return 'Commandline ClamAV'
+
+class CMDLineAVSophos(CMDLineAVGeneric):
+    """Implementation of Command Line Sophos"""
+    def __init__(self, config, section=None):
+        CMDLineAVGeneric.__init__(self, config, section)
+        self.logger=self._logger()
+        self.requiredvars['identifier']={
+                'default': 'Sophos',
+                'description': 'identifier used in the virus tag',
+            }
+
+        self.requiredvars['exectemplate']={
+                'default': '/usr/local/bin/savscan -mime -zip ${suspectpath}',
+                'description': 'full path to the scan executable and arguments. ${suspectpath} will be replaced with the message file',
+            }
+
+        self.requiredvars['viruspattern']= {
+                'default': r""">>> Virus '([^\']+)' found in file (?P<filename>.+)$""",
                 'description': 'regular expression for infected messages. use virusname and filename groups',
             }
 

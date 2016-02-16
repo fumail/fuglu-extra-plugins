@@ -176,7 +176,7 @@ class DomainAction(ScannerPlugin):
             }, 
                            
             'message':{
-                'default':'blacklisted URL ${domain} by ${blacklist}',
+                'default':'5.7.1 black listed URL ${domain} by ${blacklist}',
                 'description':'message template for rejects/ok messages',
             }, 
                            

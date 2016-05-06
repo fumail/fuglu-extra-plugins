@@ -1,4 +1,4 @@
-This repository contains additional plugins for the `FuGlu mail content scanner <https://github.com/gryphius/fuglu/>`_
+This repository contains additional plugins for the [FuGlu mail content scanner](https://github.com/gryphius/fuglu/)
 
 These plugins can have varing degrees of usability/stability, anything from "just some tinkering" to "production ready".
 if a plugin is stable and used widely enough it may be moved to the main FuGlu repository eventually.

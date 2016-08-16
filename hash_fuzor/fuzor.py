@@ -78,6 +78,26 @@ class FuzorReport(ScannerPlugin):
                 "suspect %s not enough data for a digest" %
                 suspect.id)
         return DUNNO
+    
+    
+    
+    def lint(self):
+        ok = self.checkConfig()
+        if ok:
+            try:
+                self._init_backend()
+                
+                reply = self.backend.redis.ping()
+                if reply:
+                    print 'OK: redis server replied to ping'
+                else:
+                    ok = False
+                    print 'ERROR: redis server did not reply to ping'
+
+            except redis.exceptions.ConnectionError as e:
+                ok = False
+                print 'ERROR: failed to talk to redis server: %s' % str(e)
+        return ok
 
 
 
@@ -188,6 +208,26 @@ class FuzorCheck(ScannerPlugin):
         # self.logger.info("%s: FUZOR END (NORMAL), time =
         # %.4f"%(suspect.id,diff))
         return DUNNO
+    
+    
+    
+    def lint(self):
+        ok = self.checkConfig()
+        if ok:
+            try:
+                self._init_backend()
+                
+                reply = self.backend.redis.ping()
+                if reply:
+                    print 'OK: redis server replied to ping'
+                else:
+                    ok = False
+                    print 'ERROR: redis server did not reply to ping'
+
+            except redis.exceptions.ConnectionError as e:
+                ok = False
+                print 'ERROR: failed to talk to redis server: %s' % str(e)
+        return ok
     
 
 

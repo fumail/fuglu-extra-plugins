@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 from fuglu.shared import ScannerPlugin, DELETE, DUNNO, DEFER, string_to_actioncode, apply_template
 import re
 import shlex
@@ -20,6 +21,7 @@ import threading
 import traceback
 from string import Template
 import tempfile
+
 
 class Command(object):
     """
@@ -116,15 +118,15 @@ Tags:
             },
         }
 
-
     def _problemcode(self):
         retcode = string_to_actioncode(
             self.config.get(self.section, 'problemaction'), self.config)
-        if retcode != None:
-            return retcode
-        else:
+
+        if retcode is None:
             # in case of invalid problem action
             return DEFER
+        
+        return retcode
 
     def examine(self, suspect):
         if suspect.size > self.config.getint(self.section, 'maxsize'):
@@ -134,6 +136,7 @@ Tags:
 
         try:
             viruses = self.scan_file(suspect.tempfile)
+
             if viruses is not None:
                 self._logger().info("Virus found in message from %s : %s" %
                                     (suspect.from_address, viruses))
@@ -143,66 +146,71 @@ Tags:
             else:
                 suspect.tags['virus'][self.config.get(self.section,'identifier')] = False
 
-            if viruses != None:
+            if viruses is not None:
                 virusaction = self.config.get(self.section, 'virusaction')
                 actioncode = string_to_actioncode(virusaction, self.config)
                 firstinfected, firstvirusname = viruses.items()[0]
-                values = dict(
-                    infectedfile=firstinfected, virusname=firstvirusname)
-                message = apply_template(
-                    self.config.get(self.section, 'rejectmessage'), suspect, values)
+
+                values = dict(infectedfile=firstinfected, virusname=firstvirusname)
+
+                message = apply_template(self.config.get(self.section, 'rejectmessage'), suspect, values)
                 return actioncode, message
             else:
                 return DUNNO
-        except Exception, e:
+        except Exception as e:
             self._logger().warning("Error encountered while running cmdline av scan: %s" % str(e))
-
 
         return self._problemcode()
 
     def _parse_result(self, status,out,err):
         dr = {}
-        pattern=self.config.get(self.section,'viruspattern')
-        if pattern=='': #TODO: maybe in the future we need to support based on exit status
+        pattern = self.config.get(self.section,'viruspattern')
+
+        if pattern == '': #TODO: maybe in the future we need to support based on exit status
             return None
+
         for result in re.finditer(pattern,out,re.MULTILINE):
             gdic=result.groupdict()
             if 'filename' in gdic:
-                filename=gdic['filename']
+                filename = gdic['filename']
             else:
-                filename='message'
+                filename = 'message'
 
             if 'virusname' in gdic:
-                virusname=gdic['virusname']
+                virusname = gdic['virusname']
             else:
-                virusname='virus'
-
+                virusname = 'virus'
 
             dr[filename]=virusname
 
         if len(dr) == 0:
             return None
-        else:
-            return dr
+
+        return dr
 
     def scan_file(self, filename):
         template = Template(self.config.get(self.section,'exectemplate'))
-        values=dict(suspectpath=filename)
+        values = dict(suspectpath=filename)
         cmdline = template.safe_substitute(values)
         cmd = Command(cmdline)
-        self.logger.debug("Executing %s"%cmdline)
-        status,out,err=cmd.run(timeout=self.config.getint(self.section,'timeout'))
-        if status==None: #timed out
+
+        self.logger.info("Executing %s", cmdline)
+        status, out, err = cmd.run(timeout=self.config.getint(self.section,'timeout'))
+
+        if status is None: #timed out
             raise Exception("command %s timed out"%cmdline)
-        if status==-1:
+
+        if status == -1:
             raise Exception(err)
-        self.logger.debug("Status: %s"%status)
-        self.logger.debug("Output: %s"%out)
-        if  status!=-1:
-            return self._parse_result(status,out,err)
-        else:
+
+        self.logger.debug("Status: %s", status)
+        self.logger.debug("Output: %s", out)
+
+        if status == -1:
             self.logger.error('CMDLine Scan failed: %s'%err)
             return None
+
+        return self._parse_result(status,out,err)
 
     def __str__(self):
         return 'Generic Commandline AV'
@@ -242,9 +250,10 @@ AAEAAQA3AAAAbQAAAAAA
             result = self.scan_file(eicar.name)
 
         if result is None:
-            print "EICAR Test virus not found!"
+            print("EICAR Test virus not found!")
             return False
-        print "%s found virus"%self.config.get(self.section,'identifier'), result
+
+        print("%s found virus" % self.config.get(self.section, 'identifier'), result)
         return True
 
 
@@ -270,6 +279,7 @@ class CMDLineAVClam(CMDLineAVGeneric):
 
     def __str__(self):
         return 'Commandline ClamAV'
+
 
 class CMDLineAVSophos(CMDLineAVGeneric):
     """Implementation of Command Line Sophos"""

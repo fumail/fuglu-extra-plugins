@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from __future__ import print_function
+
 from fuglu.shared import ScannerPlugin, DELETE, DUNNO, DEFER, string_to_actioncode, apply_template
 import re
 import shlex
@@ -162,15 +162,15 @@ Tags:
 
         return self._problemcode()
 
-    def _parse_result(self, status,out,err):
+    def _parse_result(self, status, out, err):
         dr = {}
         pattern = self.config.get(self.section,'viruspattern')
 
         if pattern == '': #TODO: maybe in the future we need to support based on exit status
             return None
 
-        for result in re.finditer(pattern,out,re.MULTILINE):
-            gdic=result.groupdict()
+        for result in re.finditer(pattern, out, re.MULTILINE):
+            gdic = result.groupdict()
             if 'filename' in gdic:
                 filename = gdic['filename']
             else:
@@ -198,7 +198,7 @@ Tags:
         status, out, err = cmd.run(timeout=self.config.getint(self.section,'timeout'))
 
         if status is None: #timed out
-            raise Exception("command %s timed out"%cmdline)
+            raise Exception("command %s timed out" % cmdline)
 
         if status == -1:
             raise Exception(err)

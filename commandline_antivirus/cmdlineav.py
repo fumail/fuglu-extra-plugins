@@ -283,6 +283,7 @@ class CMDLineAVClam(CMDLineAVGeneric):
 
 class CMDLineAVSophos(CMDLineAVGeneric):
     """Implementation of Command Line Sophos"""
+
     def __init__(self, config, section=None):
         CMDLineAVGeneric.__init__(self, config, section)
         self.logger=self._logger()
@@ -302,7 +303,7 @@ class CMDLineAVSophos(CMDLineAVGeneric):
             }
 
     def __str__(self):
-        return 'Commandline ClamAV'
+        return 'Commandline Sophos'
 
 
 class CMDLineAVFprot(CMDLineAVGeneric):

@@ -330,3 +330,28 @@ class CMDLineAVFprot(CMDLineAVGeneric):
     def __str__(self):
         return 'Commandline F-Prot'
 
+
+class CMDLineAVEsets(CMDLineAVGeneric):
+    """Implementation of ESETS command line scanner"""
+
+    def __init__(self, config, section=None):
+        CMDLineAVGeneric.__init__(self, config, section)
+        self.logger = self._logger()
+        self.requiredvars['identifier'] = {
+            'default': 'ESETS',
+            'description': 'identifier used in the virus tag',
+        }
+
+        self.requiredvars['exectemplate'] = {
+            'default': '/opt/eset/esets/sbin/esets_scan --no-quarantine --clean-mode=none --ads --scan-timeout=10 --mail --adware --unsafe --unwanted --heur --adv-heur ${suspectpath}',
+            'description': 'full path to the scan executable and arguments. ${suspectpath} will be replaced with the message file',
+        }
+
+        self.requiredvars['viruspattern'] = {
+            'default': r"""^name="(?P<filename>[^"]+)", threat="(?P<virusname>.{2,30})", action=""",
+            'description': 'regular expression for infected messages. use virusname and filename groups',
+        }
+
+    def __str__(self):
+        return 'Commandline ESETS'
+

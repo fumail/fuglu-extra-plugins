@@ -7,7 +7,9 @@ The plugin **CMDLineAVGeneric** can be used for any currently unsupported/unknow
 
 The file also includes subclasses for specific engines, with the correct paths/regex already configured.
 
- * ClamAV (clamscan): CMDLineAVClam
- * Sophos (savscan): CMDLineAVSophos
+ * **ClamAV** (clamscan): CMDLineAVClam
+ * **Sophos** (savscan): CMDLineAVSophos
+ * **F-Prot** (fpscan): CMDLineAVFprot
+ * **ESETS**  (esets_scan): CMDLineAVEsets
 
 Status: beta, only tested using "plugdummy"

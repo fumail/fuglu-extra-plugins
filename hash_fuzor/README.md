@@ -1,5 +1,4 @@
-The fuzor hash
-----------------
+# The fuzor hash
 
 Fuzor is a message digests similar to [pyzor](http://www.pyzor.org/)  by removing often changing parts from spam messages
 (like links, email adresses etc). The resulting hash should uniquely identify the "structure"" of a spam message instead of the
@@ -45,3 +44,24 @@ score           FUZOR_LVL_D4_8       4.0
 tflags          FUZOR_LVL_D4_8       autolearn_force
 
 ```
+## Getting hash info
+
+Sometimes it can be helpful to show how fuzor generates its digest. 
+This can be done using the 'plugdummy.py' script included in fuglu.
+
+```
+plugdummy.py -p <path to the folder where fuzor.py resides> -e <test file>.eml fuzor.FuzorPrint
+```
+
+Example:
+```
+plugdummy.py -p /usr/local/fuglu/plugins/ -e spam1.eml fuzor.FuzorPrint
+INFO:root:Input file created as /tmp/fuglu_dummy_message_in.eml
+INFO:root:*** Running plugin: FuzorPrint ***
+INFO:fuglu.plugin.FuzorPrint:Predigest: Itssharepriceisgoingthroughthe[LONG]Thecatmightbeoutofthebagnowbutthereisstillamassive[LONG]tobenefit.Isaythatthesecretisoutbecausethestockpricehasgoneuptwodaysinarowbuttherealityisthatitmustbeveryfewpeoplewhoknow[LONG]otherwiseitwould'vegonetentimeshigher.Incaseyoumissedmymessage[LONG]hereiswhatis[LONG]Abigpharmacorpisacquiringaminusculepubliccoandthisishappeningatapricethatis20timesgreaterthanwhereitcurrentlyis.Thismeansthatifyoucanput10thousandinrightnow,youwilltakeout200grandbyThursdaymorning.Thisinfoissolid.Itcomesfromanattorneywho'salongtimefriendofmineandwholiterallysawthe[LONG]documentswithhisowneyes.Youmustbewonderingwhatthecompany'stradingsymbolis,andIwillnotteaseyouanylongerit'sQlikeinQuality,SlikeinStraight,MlikeMaryandGlikeGoldThesefourletterstogethermakeupthecompany'stickerandthat'swhatyouwillneedtogivetoyourbroker,ortypeintoyouronlineaccounttopurchasethestock.Ihighlyrecommendyoudothisasquicklyaspossiblebecausethereisnoguaranteethatthepricewillremainthislowmuchlonger.Iexpectit'llcontinuetoriseandriseastheinsider[LONG]spreads.[LONG]thepotentialtobenefitis[LONG]gigantichere.-----BestRegards,KathleenAbbott
+INFO:fuglu.plugin.FuzorPrint:343822ec606c4f03a716c72fc4972601: hash 48e89b1278ab0bae81f07ee1cddbfc42913a02a2
+INFO:root:Result: DUNNO
+```
+Predigest shows the message content after fuzor removed all whitespaces, long words, urls, ...
+The actual digest is the sha sum of the predigest.
+

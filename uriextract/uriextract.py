@@ -1,13 +1,8 @@
-from fuglu.shared import ScannerPlugin,DUNNO,DELETE, string_to_actioncode,\
-    apply_template, AppenderPlugin
-import time
+# -*- coding: utf-8 -*-
+from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template
 import unittest
-import re
-import os
 from ConfigParser import RawConfigParser
 import logging
-import urlparse
-import socket
 
 DOMAINMAGIC_AVAILABLE=False
 try:
@@ -18,6 +13,7 @@ try:
     DOMAINMAGIC_AVAILABLE = True
 except ImportError:
     pass
+
 
 class URIExtract(ScannerPlugin):
     """Extract URIs from message bodies and store them as list in tag body.uris"""
@@ -33,7 +29,6 @@ class URIExtract(ScannerPlugin):
                 'default':'/etc/fuglu/extract-skip-domains.txt',
                 'description':'Domain skip list',
             },
-                
             'maxsize':{
                 'default':'10485000',
                 'description':'Maximum size of processed mails. Larger mail will be skipped.',
@@ -41,13 +36,12 @@ class URIExtract(ScannerPlugin):
             'loguris':{
                 'default':'no',
                 'description':'print extracted uris in fuglu log',
-            }
-            
+            },
         }
         
     
     def _prepare(self):
-        if self.extractor==None:
+        if self.extractor is None:
             self.extractor=domainmagic.extractor.URIExtractor()
             skiplist=self.config.get(self.section,'domainskiplist')
             if skiplist!='':
@@ -68,13 +62,16 @@ class URIExtract(ScannerPlugin):
             self.logger.info('Extracted URIs: %s'%uris)
         suspect.set_tag('body.uris',uris)
         return DUNNO
+        
 
     def process(self, suspect, decision):
         self._run(suspect)
-
+    
+    
     def examine(self,suspect):
         return self._run(suspect)
-
+    
+    
     def get_decoded_textparts(self,messagerep):
         """Returns a list of all text contents"""
         textparts=[]
@@ -82,7 +79,7 @@ class URIExtract(ScannerPlugin):
             if part.is_multipart():
                 continue
             fname=part.get_filename(None)
-            if fname==None:
+            if fname is None:
                 fname=""
             fname=fname.lower()
             contenttype=part.get_content_type()
@@ -98,10 +95,11 @@ class URIExtract(ScannerPlugin):
                 try:
                     text=str(part.get_payload(None,True))
                     textparts.append(text)
-                except:
+                except (UnicodeEncodeError, UnicodeDecodeError):
                     pass
             
         return textparts
+    
     
     def lint(self):
         if not DOMAINMAGIC_AVAILABLE:
@@ -109,6 +107,7 @@ class URIExtract(ScannerPlugin):
             return False
         
         return self.checkConfig()
+
 
 class EmailExtract(URIExtract):
     def __init__(self,config,section=None):
@@ -122,7 +121,8 @@ class EmailExtract(URIExtract):
               'default':'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To',
               'description':'comma separated list of headers with email adresses that should be skipped in body search'             
         }
-
+    
+    
     def examine(self,suspect):
         maxsize = self.config.getint(self.section, 'maxsize')
         if suspect.size>maxsize:
@@ -153,6 +153,7 @@ class EmailExtract(URIExtract):
             self.logger.info("Extracted emails: %s"%finalemails)
         return DUNNO
 
+
 class DomainAction(ScannerPlugin):
     """Perform Action based on Domains in message body"""
     
@@ -169,35 +170,30 @@ class DomainAction(ScannerPlugin):
                 'default':'yes',
                 'description':'check subdomains as well (from top to bottom, eg. example.com, bla.example.com, blubb.bla.example.com',
             },
-                
             'action':{
                 'default':'reject',
                 'description':'action on hit (reject, delete, etc)',
-            }, 
-                           
+            },
             'message':{
                 'default':'5.7.1 black listed URL ${domain} by ${blacklist}',
                 'description':'message template for rejects/ok messages',
-            }, 
-                           
+            },
             'maxdomains':{
                 'default':'10',
                 'description':'maximum number of domains to check per message',
-            }
-            
+            },
         }
         
         self.rbllookup=None
         self.tldmagic=None
-         
+    
+    
     def examine(self,suspect):
-        if self.rbllookup==None:
+        if self.rbllookup is None:
             self.rbllookup=domainmagic.rbl.RBLLookup()
             self.rbllookup.from_config(self.config.get(self.section,'blacklistconfig'))
-        if self.tldmagic==None:
+        if self.tldmagic is None:
             self.tldmagic=domainmagic.tld.TLDMagic()
-            
-        
 
         urls=suspect.get_tag('body.uris',defaultvalue=[])
         #self.logger.info("Body URIs to check: %s"%urls)
@@ -207,8 +203,8 @@ class DomainAction(ScannerPlugin):
         for domain in domains:
             counter+=1
             if counter>self.config.getint(self.section,'maxdomains'):
-                    self.logger.info("maximum number of domains reached")
-                    break
+                self.logger.info("maximum number of domains reached")
+                break
             
             tldcount=self.tldmagic.get_tld_count(domain)
             parts=domain.split('.')
@@ -227,13 +223,15 @@ class DomainAction(ScannerPlugin):
                     return string_to_actioncode(self.config.get(self.section,'action'), self.config),apply_template(self.config.get(self.section,'message'), suspect, dict(domain=domain,blacklist=identifier))
     
         return DUNNO
-
+    
+    
     def lint(self):
         if not DOMAINMAGIC_AVAILABLE:
             print "domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!"
             return False
         
         return self.checkConfig()        
+
 
 ######## TESTS ##############
 class URIExtractTest(unittest.TestCase):
@@ -260,7 +258,7 @@ class URIExtractTest(unittest.TestCase):
     def test_simple_text(self):
         txt="""hello http://bla.com please click on <a href="www.co.uk">slashdot.org/?a=c&f=m</a> www.skipme.com www.skipmenot.com/ http://allinsurancematters.net/lurchwont/ muahahaha x.org"""
         
-        uris=self.candidate.extracturis(txt)
+        uris=self.candidate.extractor.extracturis(txt)
         self.assertTrue('http://bla.com' in uris)
         self.assertTrue('www.co.uk' in uris)
         self.assertTrue('slashdot.org/?a=c&f=m' in uris)
@@ -275,20 +273,20 @@ class URIExtractTest(unittest.TestCase):
     def test_dotquad(self):
         txt="""click on 1.2.3.4 or http://62.2.17.61/ or https://8.8.8.8/bla.com """
         
-        uris=self.candidate.extracturis(txt)
+        uris=self.candidate.extractor.extracturis(txt)
         self.assertTrue('1.2.3.4' in uris)
         self.assertTrue('http://62.2.17.61/' in uris)
         self.assertTrue('https://8.8.8.8/bla.com' in uris)
         
     def test_uppercase(self):
         txt="""hello http://BLa.com please click"""
-        uris=self.candidate.extracturis(txt)
+        uris=self.candidate.extractor.extracturis(txt)
         self.assertTrue('http://bla.com' not in uris,'uris should not be lowercased')
         self.assertTrue('http://BLa.com' in uris,'uri with uppercase not found')
         
     def test_url_without_file(self):
         txt="""lol http://roasty.familyhealingassist.ru?coil&commission blubb"""
-        uris=self.candidate.extracturis(txt)
+        uris=self.candidate.extractor.extracturis(txt)
         self.assertTrue('http://roasty.familyhealingassist.ru?coil&commission' in uris,'did not find uri, result was %s'%uris)
         
 # TEST : postcat-eml.sh testdata/03E49500578 | plugdummy.py -p ~/workspace/fuglu-plugins-cm/extractors/ -e - uriextract.URIExtract uriextract.DomainAction 

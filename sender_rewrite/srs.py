@@ -139,9 +139,6 @@ class SenderRewriteScheme(ScannerPlugin):
         
         
     def get_sql_setting(self, to_domain, dbconnection, sqlquery, cache, default_value=None):
-        if cache is None:
-            cache = SettingsCache()
-
         cached = cache.get_cache(to_domain)
         if cached is not None:
             self.logger.debug("got cached settings for %s" % to_domain)
@@ -174,6 +171,8 @@ class SenderRewriteScheme(ScannerPlugin):
     
     def should_we_rewrite_this_domain(self,suspect):
         global SETTINGSCACHE
+        if SETTINGSCACHE is None:
+            SETTINGSCACHE = SettingsCache()
         
         forward_domain = self.config.get(self.section, 'forward_domain')
         if suspect.to_domain.lower() == forward_domain:
@@ -252,6 +251,7 @@ class SenderRewriteScheme(ScannerPlugin):
             except Exception as e:
                 self.logger.error('SRS: Failed to sign %s reason: %s' % (orig_sender, str(e)))
             
+        del srs
         return DUNNO
     
     

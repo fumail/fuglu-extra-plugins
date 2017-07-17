@@ -152,8 +152,8 @@ class SenderRewriteScheme(ScannerPlugin):
             # get domain settings
             dom = session.execute(sqlquery, {'domain': to_domain}).fetchall()
 
-            if not dom and not dom[0] and len(dom[0]) == 0:
-                self.logger.warning(
+            if not dom or not dom[0] or len(dom[0]) == 0:
+                self.logger.debug(
                     "Can not load domain settings - domain %s not found. Using default settings." % to_domain)
             else:
                 settings = dom[0][0]

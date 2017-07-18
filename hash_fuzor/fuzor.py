@@ -57,22 +57,21 @@ class FuzorReport(ScannerPlugin):
         if suspect.size > self.config.getint(self.section, 'maxsize'):
             return DUNNO
         msg = suspect.get_message_rep()
-        hash = FuzorDigest(msg)
-        digest = hash.digest
+        fuhash = FuzorDigest(msg)
 
         try:
             self.logger.info(
                 "DEBUG: suspect %s to=%s hash %s usable_body=%s predigest=%s subject=%s" %
-                (suspect.id, suspect.to_address, digest, hash.bodytext_size, hash.predigest[:50], suspect.get_message_rep().get('Subject')))
-        except:
+                (suspect.id, suspect.to_address, fuhash.digest, fuhash.bodytext_size, fuhash.predigest[:50], msg.get('Subject')))
+        except Exception:
             pass
 
-        if digest is not None:
+        if fuhash.digest is not None:
             self._init_backend()
-            count = self.backend.increase(digest)
+            count = self.backend.increase(fuhash.digest)
             self.logger.info(
                 "suspect %s hash %s seen %s times before" %
-                (suspect.id, digest, count - 1))
+                (suspect.id, fuhash.digest, count - 1))
         else:
             self.logger.info(
                 "suspect %s not enough data for a digest" %
@@ -176,15 +175,14 @@ class FuzorCheck(ScannerPlugin):
             return DUNNO
         msg = suspect.get_message_rep()
         # self.logger.info("%s: FUZOR PRE-HASH"%suspect.id)
-        hash = FuzorDigest(msg)
+        fuhash = FuzorDigest(msg)
         # self.logger.info("%s: FUZOR POST-HASH"%suspect.id)
-        digest = hash.digest
-        if digest is not None:
-            suspect.debug('Fuzor digest = %s' % (digest))
+        if fuhash.digest is not None:
+            suspect.debug('Fuzor digest = %s' % fuhash.digest)
             # self.logger.info("%s: FUZOR INIT-BACKEND"%suspect.id)
             self._init_backend()
             # self.logger.info("%s: FUZOR START-QUERY"%suspect.id)
-            count = self.backend.get(digest)
+            count = self.backend.get(fuhash.digest)
             # self.logger.info("%s: FUZOR END-QUERY"%suspect.id)
             headername = self.config.get(self.section, 'headername')
             # for now we only write the count, later we might replace with LOW/HIGH
@@ -196,11 +194,11 @@ class FuzorCheck(ScannerPlugin):
                 # self.logger.info("%s: FUZOR WRITE HEADER"%suspect.id)
                 # suspect.add_header("%s-ID"%headername,digest,immediate=True)
                 # suspect.add_header("%s-Lvl"%headername,str(count),immediate=True)
-                self._writeheader(suspect, "%s-ID" % headername, digest)
+                self._writeheader(suspect, "%s-ID" % headername, fuhash.digest)
                 self._writeheader(suspect, "%s-Lvl" % headername, count)
                 self.logger.info(
                     "digest %s from %s to %s seen %s times" %
-                    (digest, suspect.from_address, suspect.to_address, count))
+                    (fuhash.digest, suspect.from_address, suspect.to_address, count))
         else:
             suspect.debug('Fuzor: not enough data for a unique digest')
 
@@ -243,11 +241,10 @@ class FuzorPrint(ScannerPlugin):
 
     def examine(self, suspect):
         msg = suspect.get_message_rep()
-        hash = FuzorDigest(msg)
-        digest = hash.digest
-        if digest is not None:
-            self.logger.info("Predigest: %s" % hash.predigest)
-            self.logger.info('%s: hash %s' % (suspect.id, digest))
+        fuhash = FuzorDigest(msg)
+        if fuhash.digest is not None:
+            self.logger.info("Predigest: %s" % fuhash.predigest)
+            self.logger.info('%s: hash %s' % (suspect.id, fuhash.digest))
         else:
             self.logger.info(
                 '%s does not produce enough data for a unique hash' %
@@ -300,7 +297,7 @@ class FuzorDigest(object):
             return None
         try:
             return hashlib.sha1(predigest).hexdigest()
-        except:
+        except UnicodeEncodeError:
             return None
 
 
@@ -389,14 +386,14 @@ class RedisBackend(object):
     def get(self, digest):
         try:
             return int(self.redis.get(digest))
-        except:
+        except (ValueError, TypeError):
             return 0
 
 
 
 if __name__ == '__main__':
     import email
-    msg = email.message_from_file(sys.stdin)
-    digest = FuzorDigest(msg)
-    print "Pre-digest: %s" % digest.predigest
-    print "Digest: %s" % digest.digest
+    mymsg = email.message_from_file(sys.stdin)
+    mydigest = FuzorDigest(mymsg)
+    print "Pre-digest: %s" % mydigest.predigest
+    print "Digest: %s" % mydigest.digest

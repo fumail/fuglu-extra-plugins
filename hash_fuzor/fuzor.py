@@ -158,7 +158,7 @@ class FuzorCheck(ScannerPlugin):
         tag = suspect.get_tag('SAPlugin.tempheader')
         if isinstance(tag, list):
             tag.append(hdr)
-        elif isinstance(tag, type(None)):
+        elif tag is None:
             tag = [hdr, ]
         else:  # str/unicode
             tag = "%s\r\n%s" % (tag, hdr)

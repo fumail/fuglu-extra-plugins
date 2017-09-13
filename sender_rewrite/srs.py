@@ -14,10 +14,8 @@ Recommended dependencies:
 """
 
 
-from fuglu.shared import ScannerPlugin, DUNNO
+from fuglu.shared import ScannerPlugin, DUNNO, get_default_cache
 from fuglu.extensions.sql import get_session, ENABLED
-import threading
-import time
 import logging
 try:
     import SRS
@@ -25,66 +23,6 @@ try:
 except ImportError:
     SRS=None
     HAVE_SRS=False
-    
-    
-
-class SettingsCache(object):
-    def __init__(self, cachetime=30, cleanupinterval=300):
-        self.cache={}
-        self.cachetime=cachetime
-        self.cleanupinterval=cleanupinterval
-        self.lock=threading.Lock()
-        self.logger=logging.getLogger("fuglu.settingscache")
-        
-        t = threading.Thread(target=self.clear_cache_thread)
-        t.daemon = True
-        t.start()
-        
-    def put_cache(self,key,obj):
-        gotlock=self.lock.acquire(True)
-        if gotlock:
-            self.cache[key]=(obj,time.time())
-            self.lock.release()
-        
-    def get_cache(self,key):
-        gotlock=self.lock.acquire(True)
-        if not gotlock:
-            return None
-        
-        ret=None
-        
-        if key in self.cache:
-            obj,instime=self.cache[key]
-            now=time.time()
-            if now-instime<self.cachetime:
-                ret=obj
-            else:
-                del self.cache[key]
-                
-        self.lock.release()
-        return ret
-    
-    def clear_cache_thread(self):
-        while True:
-            time.sleep(self.cleanupinterval)
-            now=time.time()
-            gotlock=self.lock.acquire(True)
-            if not gotlock:
-                continue
-            
-            cleancount=0
-            
-            for key in self.cache.keys()[:]:
-                obj,instime=self.cache[key]
-                if now-instime>self.cachetime:
-                    del self.cache[key]
-                    cleancount+=1
-            self.lock.release()
-            self.logger.debug("Cleaned %s expired entries."%cleancount)
-            
-            
-            
-SETTINGSCACHE=None
 
 
 
@@ -135,13 +73,17 @@ class SenderRewriteScheme(ScannerPlugin):
                 'description': 'set True to rewrite address in To: header in bounce messages (reverse/decrypt mode)',
             },
         }
+    
+    
+    
+    def get_sql_setting(self, domain, dbconnection, sqlquery, cache, cachename, default_value=None, logger=None):
+        if logger is None:
+            logger = logging.getLogger()
         
-        
-        
-    def get_sql_setting(self, to_domain, dbconnection, sqlquery, cache, default_value=None):
-        cached = cache.get_cache(to_domain)
+        cachekey = '%s-%s' % (cachename, domain)
+        cached = cache.get_cache(cachekey)
         if cached is not None:
-            self.logger.debug("got cached settings for %s" % to_domain)
+            logger.debug("got cached settings for %s" % domain)
             return cached
 
         settings = default_value
@@ -150,30 +92,26 @@ class SenderRewriteScheme(ScannerPlugin):
             session = get_session(dbconnection)
 
             # get domain settings
-            dom = session.execute(sqlquery, {'domain': to_domain}).fetchall()
+            dom = session.execute(sqlquery, {'domain': domain}).fetchall()
 
             if not dom or not dom[0] or len(dom[0]) == 0:
-                self.logger.debug(
-                    "Can not load domain settings - domain %s not found. Using default settings." % to_domain)
+                logger.debug(
+                    "Can not load domain settings - domain %s not found. Using default settings." % domain)
             else:
                 settings = dom[0][0]
 
             session.close()
 
         except Exception as e:
-            self.logger.error("Exception while loading settings for %s : %s" % (to_domain, str(e)))
+            self.logger.error("Exception while loading settings for %s : %s" % (domain, str(e)))
 
-            cache.put_cache(to_domain, settings)
-        self.logger.debug("refreshed settings for %s" % to_domain)
+            cache.put_cache(cachekey, settings)
+        logger.debug("refreshed settings for %s" % domain)
         return settings
     
     
     
     def should_we_rewrite_this_domain(self,suspect):
-        global SETTINGSCACHE
-        if SETTINGSCACHE is None:
-            SETTINGSCACHE = SettingsCache()
-        
         forward_domain = self.config.get(self.section, 'forward_domain')
         if suspect.to_domain.lower() == forward_domain:
             return True # accept for decryption
@@ -184,7 +122,9 @@ class SenderRewriteScheme(ScannerPlugin):
         if dbconnection.strip()=='':
             return True # empty config -> rewrite all domains
         
-        setting = self.get_sql_setting(suspect.to_domain, dbconnection, sqlquery, SETTINGSCACHE, False)
+        cache = get_default_cache()
+        cachename = self.section
+        setting = self.get_sql_setting(suspect.to_domain, dbconnection, sqlquery, cache, cachename, False, self.logger)
         return setting
     
     
@@ -221,7 +161,7 @@ class SenderRewriteScheme(ScannerPlugin):
             return DUNNO
         
         if not self.should_we_rewrite_this_domain(suspect):
-            self.logger.info('SRS: ignoring mail to %s' % (suspect.to_address))
+            self.logger.info('SRS: ignoring mail to %s' % suspect.to_address)
             return DUNNO
         
         srs = self._init_srs()

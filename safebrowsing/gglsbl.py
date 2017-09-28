@@ -296,6 +296,7 @@ class Safebrowsing(ScannerPlugin):
                     message = self._rejectmessage(suspect, threat, virus[threat][0])
                 self.logger.info('%s mark as virus' % suspect.id)
             if block:
+                suspect.tags['blocked']['safebrowsing'] = True
                 suspect.set_tag('safebrowsing.blocked', True)
                 suspect.tags['safebrowsing.result.blocked'] = block
                 self.logger.info('%s mark as blocked' % suspect.id)

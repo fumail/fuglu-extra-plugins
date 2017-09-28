@@ -11,7 +11,7 @@ class AttachmentForwarder(ScannerPlugin):
         m=suspect.getMessageRep()
         for i in m.walk():
             contenttype_mime=i.get_content_type()
-            if contenttype_mime !=None and contenttype_mime.lower() in ['message/rfc822',]:
+            if contenttype_mime is not None and contenttype_mime.lower() in ['message/rfc822',]:
                 if i.is_multipart():
                     payload=i.get_payload(0).as_string()
                 else:

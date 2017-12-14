@@ -3,6 +3,7 @@ from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template
 import unittest
 from ConfigParser import RawConfigParser
 import logging
+from HTMLParser import HTMLParser
 
 DOMAINMAGIC_AVAILABLE=False
 try:
@@ -23,6 +24,7 @@ class URIExtract(ScannerPlugin):
         self.extractor=None
         
         self.logger=logging.getLogger('fuglu.plugin.URIExtract')
+        self.htmlparser = HTMLParser()
                 
         self.requiredvars={       
             'domainskiplist':{
@@ -56,7 +58,7 @@ class URIExtract(ScannerPlugin):
 
         self._prepare()
 
-        textparts=" ".join(self.get_decoded_textparts(suspect.get_message_rep()))
+        textparts=" ".join(self.get_decoded_textparts(suspect))
         uris=self.extractor.extracturis(textparts)
         if self.config.getboolean(self.section,'loguris'):
             self.logger.info('Extracted URIs: %s'%uris)
@@ -72,8 +74,10 @@ class URIExtract(ScannerPlugin):
         return self._run(suspect)
     
     
-    def get_decoded_textparts(self,messagerep):
+    def get_decoded_textparts(self, suspect):
         """Returns a list of all text contents"""
+        messagerep = suspect.get_message_rep()
+        
         textparts=[]
         for part in messagerep.walk():
             if part.is_multipart():
@@ -88,7 +92,10 @@ class URIExtract(ScannerPlugin):
                 payload=part.get_payload(None,True)
                 if 'html' in contenttype or '.htm' in fname: #remove newlines from html so we get uris spanning multiple lines
                     payload=payload.replace('\n', '').replace('\r', '')
-                    
+                try:
+                    payload = self.htmlparser.unescape(payload)
+                except Exception:
+                    self.logger.debug('%s failed to unescape html entities' % suspect.id)
                 textparts.append(payload)
             
             if contenttype=='multipart/alternative':
@@ -96,7 +103,7 @@ class URIExtract(ScannerPlugin):
                     text=str(part.get_payload(None,True))
                     textparts.append(text)
                 except (UnicodeEncodeError, UnicodeDecodeError):
-                    pass
+                    self.logger.debug('%s failed to convert alternative part to string' % suspect.id)
             
         return textparts
     

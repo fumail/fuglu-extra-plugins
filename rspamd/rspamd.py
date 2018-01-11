@@ -187,8 +187,10 @@ class RSpamdPlugin(ScannerPlugin):
         
         if replydata:
             isspam = 'is_spam' in replydata and replydata['is_spam'] == True
-            if not isspam and 'action' in replydata and replydata['action'] != 'no_action':
-                isspam = True
+            if not isspam and 'action' in replydata:
+                self.logger.debug('%s rspamd action is: %s' % (suspect.id, replydata['action']))
+                if replydata['action'] not in ['no_action', 'no action']:
+                    isspam = True
             # action is defined in metrics.conf, defaults are: reject = 15, add_header = 6, greylist = 4
             # we treat every action other than "no_action" as "rspamd detected spam"
             
@@ -226,7 +228,7 @@ class RSpamdPlugin(ScannerPlugin):
                 line = '%s %s %s %s' % (weight, name, desc, options)
                 report.append(line)
                 symbols.append(name)
-        else:
+        else: # rspamd 1.6
             keys = reply.keys()
             for key in keys:
                 score = 0

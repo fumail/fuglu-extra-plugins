@@ -178,7 +178,7 @@ class RSpamdPlugin(ScannerPlugin):
             reply = None
             self.logger.error('Failed to get rspamd response for %s: %s' % (suspect.id, str(e)))
         
-        if reply and 'default' in reply: # rspamd 1.0
+        if reply and 'default' in reply: # rspamd 1.6
             replydata = reply['default']
         elif reply and len(reply) == 1: #rspamd 0.6
             replydata = reply[0]
@@ -242,10 +242,11 @@ class RSpamdPlugin(ScannerPlugin):
                         name = symbol['name']
                     if 'description' in symbol:
                         desc = symbol['description']
-                line = '%s %s %s' % (score, name, desc)
-                report.append(line)
-                symbols.append(name)
-                
+                    elif 'options' in symbol:
+                        desc = ' / '.join(symbol['options'])
+                    line = '%s %s %s' % (score, name, desc)
+                    report.append(line)
+                    symbols.append(name)
                     
         return report, symbols
     
@@ -296,6 +297,7 @@ class RSpamdPlugin(ScannerPlugin):
             self.logger.debug('%s Message is not spam' % suspect.id)
             suspect.debug('Message is not spam')
 
+        suspect.tags['RSpamd.report'] = '\n'.join(report)
         suspect.tags['spam']['RSpamd'] = isspam
         suspect.tags['highspam']['RSpamd'] = False
         if spamscore is not None:
@@ -310,9 +312,7 @@ class RSpamdPlugin(ScannerPlugin):
                     action = configaction
         
         forwardoriginal = self.config.getboolean(self.section, 'forwardoriginal')
-        if forwardoriginal:
-            suspect.tags['RSpamd.report'] = '\n'.join(report)
-        else:
+        if not forwardoriginal:
             # rspamd sample headers: https://github.com/vstakhov/rspamd/issues/799
             suspect.addheader('%sRSPAMD-Spam' % self.config.get('main', 'prependaddedheaders'),
                               'yes' if isspam else 'no')

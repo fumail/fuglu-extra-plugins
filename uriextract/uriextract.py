@@ -138,7 +138,7 @@ class EmailExtract(URIExtract):
 
         self._prepare()
 
-        textparts=" ".join(self.get_decoded_textparts(suspect.get_message_rep()))
+        textparts=" ".join(self.get_decoded_textparts(suspect))
         for hdr in self.config.get(self.section,'headers').split(','):
             textparts+=" ".join(suspect.get_message_rep().get_all(hdr,""))
 

@@ -204,7 +204,7 @@ class DomainAction(ScannerPlugin):
 
         urls=suspect.get_tag('body.uris',defaultvalue=[])
         #self.logger.info("Body URIs to check: %s"%urls)
-        domains=set(map(domainmagic.extractor.domain_from_uri,urls))
+        domains=set(map(domainmagic.extractor.fqdn_from_uri,urls))
         
         counter=0
         for domain in domains:

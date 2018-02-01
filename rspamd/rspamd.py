@@ -117,7 +117,7 @@ class RSpamdPlugin(ScannerPlugin):
         data = self.rspamd_json(suspect)
         
         os.remove(tmpfile)
-        print data
+        print(data)
     
     
     
@@ -129,9 +129,9 @@ class RSpamdPlugin(ScannerPlugin):
         timeout = self.config.getint(self.section, 'timeout')
 
         if self.config.getboolean(self.section, 'scanoriginal'):
-            spam = suspect.get_original_source()
+            content = suspect.get_original_source()
         else:
-            spam = suspect.get_source()
+            content = suspect.get_source()
         
         mynetworksre=None
         mynetworksconfig = self.config.get(self.section,'mynetworks') or None
@@ -169,7 +169,7 @@ class RSpamdPlugin(ScannerPlugin):
         
         try:
             conn = httplib.HTTPConnection(host, port, timeout=timeout)
-            conn.request("POST", "/symbols", spam, {})
+            conn.request("POST", "/symbols", content, {})
             response = conn.getresponse()
             #response.status, response.reason
             jsondata = response.read()
@@ -254,10 +254,8 @@ class RSpamdPlugin(ScannerPlugin):
     
     def examine(self, suspect):
         if suspect.get_tag('RSpamd.skip') is True:
-            self.logger.debug(
-                '%s Skipping RSpamd Plugin (requested by previous plugin)' % suspect.id)
-            suspect.set_tag(
-                'RSpamd.skipreason', 'requested by previous plugin')
+            self.logger.debug('%s Skipping RSpamd Plugin (requested by previous plugin)' % suspect.id)
+            suspect.set_tag('RSpamd.skipreason', 'requested by previous plugin')
             return DUNNO
         
         maxsize = self.config.getint(self.section, 'maxsize')
@@ -271,32 +269,30 @@ class RSpamdPlugin(ScannerPlugin):
                 "%sRSPAMD-SKIP" % prependheader, 'Too big for spamchecks. %s > %s' % (suspect.size, maxsize))
             suspect.set_tag('RSpamd.skipreason', 'size skip')
             return DUNNO
-
+        
         runtimeconfig = DBConfig(self.config, suspect)
-
+        
         isspam, spamscore, report, symbols = self.rspamd_json(suspect)
         
         action = DUNNO
         message = None
-
+        
         if isspam is None:
             return self._problemcode()
         
         elif isspam:
             self.logger.debug('%s Message is spam' % suspect.id)
             suspect.debug('Message is spam')
-
-            configaction = string_to_actioncode(
-                runtimeconfig.get(self.section, 'lowspamaction'), self.config)
+            
+            configaction = string_to_actioncode(runtimeconfig.get(self.section, 'lowspamaction'), self.config)
             if configaction is not None:
                 action = configaction
             values = dict(spamscore=spamscore)
-            message = apply_template(
-                self.config.get(self.section, 'rejectmessage'), suspect, values)
+            message = apply_template(self.config.get(self.section, 'rejectmessage'), suspect, values)
         else:
             self.logger.debug('%s Message is not spam' % suspect.id)
             suspect.debug('Message is not spam')
-
+        
         suspect.tags['RSpamd.report'] = '\n'.join(report)
         suspect.tags['spam']['RSpamd'] = isspam
         suspect.tags['highspam']['RSpamd'] = False
@@ -318,14 +314,13 @@ class RSpamdPlugin(ScannerPlugin):
                               'yes' if isspam else 'no')
             suspect.addheader('%sRSPAMD-Spam-Symbols' % self.config.get('main', 'prependaddedheaders'),
                               ','.join(symbols))
-                    
+        
         return action, message
     
     
     
     def _problemcode(self):
-        retcode = string_to_actioncode(
-            self.config.get(self.section, 'problemaction'), self.config)
+        retcode = string_to_actioncode(self.config.get(self.section, 'problemaction'), self.config)
         if retcode is not None:
             return retcode
         else:

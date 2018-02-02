@@ -1,8 +1,5 @@
-from fuglu.shared import ScannerPlugin,DELETE,DUNNO,DEFER,SuspectFilter
-import time
-import unittest
+from fuglu.shared import ScannerPlugin,DUNNO,SuspectFilter
 import os
-import shutil
 import imaplib
 from urlparse import urlparse
 
@@ -41,24 +38,24 @@ The rulefile works similar to the archive plugin. As third column you have to pr
         
     def examine(self,suspect):
         imapcopyrules=self.config.get(self.section, 'imapcopyrules')
-        if imapcopyrules==None or imapcopyrules=="":
+        if imapcopyrules is None or imapcopyrules=="":
             return DUNNO
         
         if not os.path.exists(imapcopyrules):
             self._logger().error('IMAP copy rules file does not exist : %s'%imapcopyrules)
             return DUNNO
         
-        if self.filter==None:
+        if self.filter is None:
             self.filter=SuspectFilter(imapcopyrules)
         
         (match,info)=self.filter.matches(suspect,extended=True)
         if match:
             field,matchedvalue,arg,regex=info
-            if arg!=None and arg.lower()=='no':
+            if arg is not None and arg.lower()=='no':
                 suspect.debug("Suspect matches imap copy exception rule")
                 self.logger.info("""%s: Header %s matches imap copy exception rule '%s' """%(suspect.id,field,regex))
             else:
-                if arg==None or (not arg.lower().startswith('imap')):
+                if arg is None or (not arg.lower().startswith('imap')):
                     self.logger.error("Unknown target format '%s' should be 'imap(s)://user:pass@host/folder'"%arg)
                     
                 else:
@@ -86,7 +83,7 @@ The rulefile works similar to the archive plugin. As third column you have to pr
             ssl=False
         
         
-        if port==None:
+        if port is None:
             if ssl:
                 port=imaplib.IMAP4_SSL_PORT
             else:
@@ -102,7 +99,7 @@ The rulefile works similar to the archive plugin. As third column you have to pr
                 ltype='IMAP-SSL'
             msg="%s Connection to server %s failed: %s"%(ltype,host,str(e))
             if lintmode:
-                print msg
+                print(msg)
             else:
                 self.logger.error(msg)
             return None
@@ -112,16 +109,16 @@ The rulefile works similar to the archive plugin. As third column you have to pr
         except Exception,e:
             msg="Login to server %s failed: %s"%(host,str(e))
             if lintmode:
-                print msg
+                print(msg)
             else:
                 self.logger.error(msg)
             return None
         
-        type,count=imap.select(folder)
-        if type=='NO':
+        mtype, count = imap.select(folder)
+        if mtype=='NO':
             msg="Could not select folder %s"%folder
             if lintmode:
-                print msg
+                print(msg)
             else:
                 self.logger.error(msg )
             return None
@@ -141,8 +138,8 @@ The rulefile works similar to the archive plugin. As third column you have to pr
         else:
             src=suspect.get_source()
 
-        (type,data)=imap.append(folder,None,None,src)
-        if type!='OK':
+        mtype, data = imap.append(folder,None,None,src)
+        if mtype!='OK':
             self.logger.error('Could put store in IMAP. APPEND command failed: %s'%data)
         imap.logout()
 
@@ -156,16 +153,16 @@ The rulefile works similar to the archive plugin. As third column you have to pr
         #read file, check for all imap accounts
         imapcopyrules=self.config.get(self.section, 'imapcopyrules')
         if imapcopyrules!='' and not os.path.exists(imapcopyrules):
-            print "Imap copy rules file does not exist : %s"%imapcopyrules
+            print("Imap copy rules file does not exist : %s"%imapcopyrules)
             return False
-        filter=SuspectFilter(imapcopyrules)
+        sfilter=SuspectFilter(imapcopyrules)
 
         accounts=[]
-        for tup in filter.patterns:
-            (headername,pattern,arg)=tup
+        for tup in sfilter.patterns:
+            headername,pattern,arg = tup
             if arg not in accounts:
-                if arg==None:
-                    print "Rule %s %s has no imap copy target"%(headername,pattern.pattern)
+                if arg is None:
+                    print("Rule %s %s has no imap copy target"%(headername,pattern.pattern))
                     return False
                 if arg.lower()=='no':
                     continue
@@ -176,10 +173,10 @@ The rulefile works similar to the archive plugin. As third column you have to pr
             host=p.hostname
             username=p.username
             folder=p.path[1:]
-            print "Checking %s@%s/%s"%(username,host,folder)
+            print("Checking %s@%s/%s"%(username,host,folder))
             imap=self.imapconnect(acc,lintmode=True)
             if not imap:
-                print "Lint failed for this account"
+                print("Lint failed for this account")
                 return False
 
         return True

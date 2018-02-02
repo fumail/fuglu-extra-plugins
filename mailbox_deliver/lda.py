@@ -1,4 +1,4 @@
-from fuglu.shared import Suspect,ScannerPlugin,actioncode_to_string,apply_template, DEFER,DUNNO,SuspectFilter
+from fuglu.shared import ScannerPlugin,apply_template, DEFER,DUNNO,SuspectFilter
 
 import time
 import os
@@ -48,12 +48,12 @@ class LDAPlugin(ScannerPlugin):
         filterfile=self.config.get(self.section, 'filterfile','').strip()
         
         if filterfile!='' and not os.path.exists(filterfile):
-            print 'LDA filter rules file does not exist : %s'%filterfile
+            print('LDA filter rules file does not exist : %s'%filterfile)
             allok=False
         
         boxtype=self.config.get(self.section, 'boxtype')
         if boxtype not in self.boxtypemap:
-            print "Unsupported boxtype: %s"%boxtype
+            print("Unsupported boxtype: %s"%boxtype)
             allok=False
         
         return allok
@@ -64,14 +64,14 @@ class LDAPlugin(ScannerPlugin):
         
         filterfile=self.config.get(self.section, 'filterfile','').strip()
         
-        if self.filter==None:
+        if self.filter is None:
             if filterfile!='': 
                 if not os.path.exists(filterfile):
                     self._logger().warning('LDA filter rules file does not exist : %s'%filterfile)
                     return DEFER
                 self.filter=SuspectFilter(filterfile)
         
-        if self.filter!=None:
+        if self.filter is not None:
             match=self.filter.matches(suspect)
             if not match:
                 return DUNNO
@@ -91,7 +91,7 @@ class LDAPlugin(ScannerPlugin):
             mbox.lock()
             mbox.add(mbox_msg)
             mbox.flush()
-        except Exception,e:
+        except Exception as e:
             self.logger.error("Could not store message %s to %s: %s"%(suspect.id,mbox_path,str(e)))
         finally:
             mbox.unlock()
@@ -108,7 +108,7 @@ class LDAPlugin(ScannerPlugin):
             maildir.lock()
             maildir.add(md_msg)
             maildir.flush()
-        except Exception,e:
+        except Exception as e:
             self.logger.error("Could not store message %s to %s: %s"%(suspect.id,md_path,str(e)))
         finally:
             maildir.unlock()

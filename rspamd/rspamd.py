@@ -1,13 +1,15 @@
 # -*- coding: UTF-8 -*-
 
-
 from fuglu.shared import ScannerPlugin, DUNNO, DEFER, Suspect, string_to_actioncode, apply_template
 from fuglu.extensions.sql import DBConfig
 import re
-import httplib
 import json
 import tempfile
 import os
+try:
+    from httplib import HTTPConnection
+except ImportError:
+    from http.client import HTTPConnection
 
 
 
@@ -168,7 +170,7 @@ class RSpamdPlugin(ScannerPlugin):
         headers.update(clientinfoheaders)
         
         try:
-            conn = httplib.HTTPConnection(host, port, timeout=timeout)
+            conn = HTTPConnection(host, port, timeout=timeout)
             conn.request("POST", "/symbols", content, {})
             response = conn.getresponse()
             #response.status, response.reason

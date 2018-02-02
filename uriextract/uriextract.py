@@ -1,19 +1,27 @@
 # -*- coding: utf-8 -*-
 from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template
 import unittest
-from ConfigParser import RawConfigParser
 import logging
-from HTMLParser import HTMLParser
-
-DOMAINMAGIC_AVAILABLE=False
 try:
-    import domainmagic
-    import domainmagic.rbl
-    import domainmagic.extractor
-    import domainmagic.tld
+    #py2
+    import ConfigParser
+    # noinspection PyCompatibility
+    from HTMLParser import HTMLParser
+except ImportError:
+    #py3
+    # noinspection PyUnresolvedReferences
+    import configparser as ConfigParser
+    # noinspection PyCompatibility, PyUnresolvedReferences
+    from html.parser import HTMLParser
+
+try:
+    from domainmagic.extractor import URIExtractor, fqdn_from_uri
+    from domainmagic.rbl import RBLLookup
+    from domainmagic.tld import TLDMagic
     DOMAINMAGIC_AVAILABLE = True
 except ImportError:
-    pass
+    DOMAINMAGIC_AVAILABLE=False
+    fqdn_from_uri = URIExtractor = RBLLookup = TLDMagic = None
 
 
 class URIExtract(ScannerPlugin):
@@ -44,7 +52,7 @@ class URIExtract(ScannerPlugin):
     
     def _prepare(self):
         if self.extractor is None:
-            self.extractor=domainmagic.extractor.URIExtractor()
+            self.extractor = URIExtractor()
             skiplist=self.config.get(self.section,'domainskiplist')
             if skiplist!='':
                 self.extractor.load_skiplist(skiplist)
@@ -110,7 +118,7 @@ class URIExtract(ScannerPlugin):
     
     def lint(self):
         if not DOMAINMAGIC_AVAILABLE:
-            print "domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!"
+            print("domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!")
             return False
         
         return self.checkConfig()
@@ -197,14 +205,14 @@ class DomainAction(ScannerPlugin):
     
     def examine(self,suspect):
         if self.rbllookup is None:
-            self.rbllookup=domainmagic.rbl.RBLLookup()
+            self.rbllookup = RBLLookup()
             self.rbllookup.from_config(self.config.get(self.section,'blacklistconfig'))
         if self.tldmagic is None:
-            self.tldmagic=domainmagic.tld.TLDMagic()
+            self.tldmagic = TLDMagic()
 
         urls=suspect.get_tag('body.uris',defaultvalue=[])
         #self.logger.info("Body URIs to check: %s"%urls)
-        domains=set(map(domainmagic.extractor.fqdn_from_uri,urls))
+        domains=set(map(fqdn_from_uri,urls))
         
         counter=0
         for domain in domains:
@@ -225,7 +233,7 @@ class DomainAction(ScannerPlugin):
                 subdomain='.'.join(parts[-subindex:])
 
                 listings=self.rbllookup.listings(subdomain)
-                for identifier,humanreadable in listings.iteritems():
+                for identifier,humanreadable in iter(listings.items()):
                     self.logger.info("%s : url host %s flagged as %s because %s"%(suspect.id,domain,identifier,humanreadable))
                     return string_to_actioncode(self.config.get(self.section,'action'), self.config),apply_template(self.config.get(self.section,'message'), suspect, dict(domain=domain,blacklist=identifier))
     
@@ -234,7 +242,7 @@ class DomainAction(ScannerPlugin):
     
     def lint(self):
         if not DOMAINMAGIC_AVAILABLE:
-            print "domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!"
+            print("domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!")
             return False
         
         return self.checkConfig()        
@@ -252,7 +260,7 @@ class URIExtractTest(unittest.TestCase):
         open('/tmp/domainskiplist.txt','w').write(skiplist)
         
         
-        config=RawConfigParser()
+        config=ConfigParser.RawConfigParser()
         config.add_section(section)
         config.set(section, 'tldfiles', "/tmp/tld.txt")
         config.set(section, 'domainskiplist', "/tmp/domainskiplist.txt")
@@ -271,7 +279,7 @@ class URIExtractTest(unittest.TestCase):
         self.assertTrue('slashdot.org/?a=c&f=m' in uris)
         
         self.assertTrue('www.skipmenot.com/' in uris)
-        #print " ".join(uris)
+        #print(" ".join(uris))
         self.assertTrue("skipme.com" not in " ".join(uris))
         
         self.assertTrue("http://allinsurancematters.net/lurchwont/" in uris)

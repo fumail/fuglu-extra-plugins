@@ -203,11 +203,11 @@ class SenderRewriteScheme(ScannerPlugin):
         allok = self.checkConfig()
         if not HAVE_SRS:
             allok = False
-            print 'SRS library not found'
+            print('SRS library not found')
             
         if self.config.get(self.section, 'secret') == '':
             allok = False
-            print 'no secret set in config'
+            print('no secret set in config')
         
         if allok:
             srs = self._init_srs()
@@ -217,20 +217,20 @@ class SenderRewriteScheme(ScannerPlugin):
         sqlquery = self.config.get(self.section, 'domain_sql_query')
         if not sqlquery.lower().startswith('select '):
             allok = False
-            print 'SQL statement must be a SELECT query'
+            print('SQL statement must be a SELECT query')
         if not ENABLED:
             allok = False
-            print 'SQLAlchemy not available, cannot use SQL backend'
+            print('SQLAlchemy not available, cannot use SQL backend')
         if allok:
             dbconnection = self.config.get(self.section, 'dbconnection')
             if dbconnection.strip() == '':
-                print 'No DB connection defined. Disabling SQL backend, all addresses will be rewritten.'
+                print('No DB connection defined. Disabling SQL backend, all addresses will be rewritten.')
             else:
                 try:
                     conn=get_session(dbconnection)
                     conn.execute(sqlquery, {'domain':'example.com'})
                 except Exception as e:
                     allok = False
-                    print str(e)
+                    print(str(e))
             
         return allok

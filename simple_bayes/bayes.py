@@ -16,9 +16,8 @@
 from fuglu.shared import ScannerPlugin, AppenderPlugin, SuspectFilter
 import time
 import math
-from itertools import chain
 import random
-import thread
+import threading
 
 from hashlib import sha1
 REDIS_AVAILABLE=0
@@ -79,7 +78,8 @@ class TokenStoreBase(object):
 if REDIS_AVAILABLE:
     class RedisTokenStore(TokenStoreBase):
 
-        def __init__(self,configstring):
+        def __init__(self, configstring):
+            super(RedisTokenStore, self).__init__(configstring)
             if configstring=='':
                 self.redis=StrictRedis()
             else:
@@ -162,11 +162,14 @@ if REDIS_AVAILABLE:
             pipeline.set(self.seen_prefix+aswhat+'_'+digest.hexdigest(),1)
             pipeline.execute()
             if self.recalc_necessary():
-                thread.start_new_thread(self.background_recalc,())
+                thread = threading.Thread(target=self.background_recalc)
+                thread.daemon = True
+                thread.start()
+                
 
         def recalc_necessary(self):
             last_recalc=self.redis.hget(self.total_key,'last_recalc')
-            if last_recalc==None:
+            if last_recalc is None:
                 last_recalc=0
             last_recalc=int(last_recalc)
             return time.time()-last_recalc>self.recalc_totals_interval
@@ -220,7 +223,7 @@ class BayesPlugin(object):
         self.filter=SuspectFilter(None)
 
     def init_backend(self):
-        if self.tokenstore!=None:
+        if self.tokenstore is not None:
             return
         backendtype=self.config.get(self.section,'backendtype')
         if backendtype not in SUPPORTED_BACKENDS:
@@ -292,7 +295,7 @@ class BayesPlugin(object):
     def ngrams(self,sequence,n=3,maxnumber=None):
         sequence = list(sequence)
         count = max(0, len(sequence) - n + 1)
-        if maxnumber==None:
+        if maxnumber is None:
             maxnumber=count
         return ["".join(sequence[i:i+n]) for i in range(min(count,maxnumber))]
 
@@ -318,7 +321,7 @@ class BayesClassify(ScannerPlugin,BayesPlugin
     def examine(self, suspect):
         starttime = time.time()
         self.init_backend()
-        if self.tokenstore==None:
+        if self.tokenstore is None:
             self.logger.warn("Token backend not initialized")
             return
         probability=self.spam_probability(suspect)
@@ -344,12 +347,12 @@ class SAScoreBayesLearner(AppenderPlugin,BayesPlugin
 
     def process(self, suspect,decisions):
         self.init_backend()
-        if self.tokenstore==None:
+        if self.tokenstore is None:
             self.logger.warn("Token backend not initialized")
             return
 
         sascore=suspect.get_tag('SAPlugin.spamscore')
-        if sascore==None:
+        if sascore is None:
             return
 
         sascore=float(sascore)

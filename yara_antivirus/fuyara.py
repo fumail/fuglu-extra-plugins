@@ -1,28 +1,27 @@
-from fuglu.shared import ScannerPlugin, string_to_actioncode, DEFER, DUNNO, actioncode_to_string,\
-    DELETE, Suspect, apply_template
-
-# do not use cStringIO - the python2.6 fix for opening some zipfiles does
-# not work with cStringIO
-from StringIO import StringIO
+from fuglu.shared import ScannerPlugin, string_to_actioncode, DUNNO
 import zipfile
 from email.header import decode_header
 import sys
 import os
 
-RARFILE_AVAILABLE = 0
+# do not use cStringIO - the python2.6 fix for opening some zipfiles does
+# not work with cStringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 try:
     import rarfile
     RARFILE_AVAILABLE = 1
 except ImportError:
-    pass
+    RARFILE_AVAILABLE = 0
 
-
-YARA_AVAILABLE = 0
 try:
     import yara
     YARA_AVAILABLE = 1
 except ImportError:
-    pass
+    YARA_AVAILABLE = 0
 
 class YARAPlugin(ScannerPlugin):
     """Flag messages as virus based on YARA rules
@@ -170,9 +169,8 @@ class YARAPlugin(ScannerPlugin):
                         continue
                     return self.yara_hit(extracted)
 
-            except Exception, e:
-                self.logger.warning(
-                    "archive scanning failed in attachment %s: %s" % (att_name, str(e)))
+            except Exception as e:
+                self.logger.warning("archive scanning failed in attachment %s: %s" % (att_name, str(e)))
         else:
             return self.yara_hit(payload.getvalue())
 
@@ -253,16 +251,16 @@ class YARAPlugin(ScannerPlugin):
 
     def lint_dependencies(self):
         if not YARA_AVAILABLE:
-            print "this plugin needs the yara python library"
+            print("this plugin needs the yara python library")
             return False
         if not RARFILE_AVAILABLE:
-            print "missing rarfile library, RAR unpacking disabled"
+            print("missing rarfile library, RAR unpacking disabled")
         return True
 
     def lint_rules(self):
         rulesdir = self.config.get(self.section,'yararulesdir')
         if not os.path.isdir(rulesdir):
-            print "Yara rules directory %s not found"%rulesdir
+            print("Yara rules directory %s not found"%rulesdir)
             return False
         self.reload_if_necessary(warnings_as_errors=True)
         return True

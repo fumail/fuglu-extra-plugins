@@ -4,13 +4,17 @@ from fuglu.shared import ScannerPlugin, DUNNO, string_to_actioncode, SuspectFilt
 from fuglu.extensions.sql import ENABLED as SQLALCHEMY_AVAILABLE, get_session
 import re
 import os
+import sys
 from hashlib import md5
-REDIS_AVAILABLE =  0
 try:
     import redis
     REDIS_AVAILABLE = 1
 except ImportError:
-    pass
+    redis = None
+    REDIS_AVAILABLE = 0
+
+if sys.version_info.major >= 3:
+    unicode = str
 
 
 AVAILABLE_RATELIMIT_BACKENDS={}
@@ -39,7 +43,7 @@ class RollingWindowBackend(object):
 
     def clear(self,eventname,abstime=None):
         """clear events before abstime in secs. if abstime is not provided, clears the whole queue"""
-        if abstime==None:
+        if abstime is None:
             abstime=int(time.time())
         self._real_clear(eventname,abstime)
 
@@ -129,19 +133,19 @@ if SQLALCHEMY_AVAILABLE:
             self.occurence = None
 
     ratelimit_table = Table("fuglu_ratelimit", metadata,
-                           Column('id', BigInteger, primary_key=True),
-                           Column('eventname', Unicode(255), nullable=False),
-                           Column('occurence', Integer, nullable=False),
+                            Column('id', BigInteger, primary_key=True),
+                            Column('eventname', Unicode(255), nullable=False),
+                            Column('occurence', Integer, nullable=False),
                             Index('udx_ev_oc', 'eventname', 'occurence'),
-                           )
+                            )
     ratelimit_mapper = mapper(Event, ratelimit_table)
 
 
 
     class SQLAlchemyBackend(RollingWindowBackend):
         def _fix_eventname(self,eventname):
-            if type(eventname)!=unicode:
-                eventname=unicode(eventname)
+            if isinstance(eventname, unicode):
+                eventname = unicode(eventname)
             if len(eventname)>255:
                 eventname = unicode(md5(eventname).hexdigest())
             return eventname
@@ -280,7 +284,7 @@ class RateLimitPlugin(ScannerPlugin):
             if line.startswith('#') or line.strip()=='':
                 continue
             match= patt.match(line)
-            if match == None:
+            if match is None:
                 self.logger.error('cannot parse limiter config line %s'%lineno)
                 continue
             gdict = match.groupdict()
@@ -290,10 +294,10 @@ class RateLimitPlugin(ScannerPlugin):
             limiter.timespan = int(gdict['time'])
             limiter.fields = gdict['fieldlist'].split(',')
             limiter.regex = gdict['matchregex']
-            if gdict['skiplist']!=None:
+            if gdict['skiplist'] is not None:
                 limiter.skip = gdict['skiplist'].split(',')
             action = string_to_actioncode(gdict['action'])
-            if action == None:
+            if action is None:
                 self.logger.error("Limiter config line %s : invalid action %s"%(lineno,gdict['action']))
             limiter.action=action
             limiter.message=gdict['message']
@@ -302,17 +306,18 @@ class RateLimitPlugin(ScannerPlugin):
 
 
     def examine(self,suspect):
-        if self.limiters==None:
+        if self.limiters is None:
             filename=self.config.get(self.section,'limiterfile')
             if not os.path.exists(filename):
                 self.logger.error("Limiter config file %s not found"%filename)
                 return
-            limiterconfig = open(filename,'r').read()
-            limiters = self.load_limiter_config(limiterconfig)
-            self.limiters = limiters
-            self.logger.info("Found %s limiter configurations"%(len(limiters)))
+            with open(filename) as fp:
+                limiterconfig = fp.read()
+            self.limiters = self.load_limiter_config(limiterconfig) # type: list
+            # noinspection PyTypeChecker
+            self.logger.info("Found %s limiter configurations"%(len(self.limiters)))
 
-        if self.backend_instance == None:
+        if self.backend_instance is None:
             btype = self.config.get(self.section,'backendtype')
             if btype not in AVAILABLE_RATELIMIT_BACKENDS:
                 self.logger.error('ratelimit backend %s not available'%(btype))
@@ -321,6 +326,7 @@ class RateLimitPlugin(ScannerPlugin):
 
 
         skiplist = []
+        # noinspection PyTypeChecker
         for limiter in self.limiters:
             if limiter.name in skiplist: # check if this limiter is skipped by a previous one
                 self.logger.debug('limiter %s skipped due to previous match'%limiter.name)
@@ -340,9 +346,9 @@ class RateLimitPlugin(ScannerPlugin):
                 continue
 
             checkval = ','.join(fieldvalues)
-            if limiter.regex != None:
+            if limiter.regex is not None:
                 if re.match(limiter.regex,checkval):
-                    if limiter.skip != None:
+                    if limiter.skip is not None:
                         skiplist.extend(limiter.skip)
                 else: #no match, skip this limiter
                     self.logger.debug('Skipping limiter %s - regex does not match'%(limiter.name))
@@ -350,11 +356,11 @@ class RateLimitPlugin(ScannerPlugin):
             #self.logger.debug("check %s"%str(limiter))
             eventname = limiter.name+checkval
             timespan = limiter.timespan
-            max = limiter.max
-            if max < 0: #no limit
+            lmax = limiter.max
+            if lmax < 0: #no limit
                 continue
             event_count = self.backend_instance.check_count(eventname,timespan)
             self.logger.debug("Limiter event %s  count: %s"%(eventname,event_count))
-            if event_count>max:
+            if event_count>lmax:
                 return limiter.action, apply_template( limiter.message, suspect)
 

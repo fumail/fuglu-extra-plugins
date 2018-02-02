@@ -307,7 +307,7 @@ class FuzorDigest(object):
         errors = "ignore"
         if not charset:
             charset = "ascii"
-        elif (charset.lower().replace("_", "-") in ("quopri-codec", "quopri", "quoted-printable", "quotedprintable")):
+        elif charset.lower().replace("_", "-") in ("quopri-codec", "quopri", "quoted-printable", "quotedprintable"):
             errors = "strict"
 
         try:

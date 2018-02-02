@@ -1,4 +1,4 @@
-from fuglu.shared import Suspect,AppenderPlugin,actioncode_to_string,apply_template
+from fuglu.shared import AppenderPlugin,actioncode_to_string,apply_template
 import fuglu.extensions.sql
 import re
 import string
@@ -30,7 +30,7 @@ class SQLRunner(AppenderPlugin):
     
     
     def sqlfix(self,values):
-        for k,v in values.copy().iteritems():
+        for k,v in iter(values.copy().items()):
             if type(v)==str:
                 values[k]=re.sub("""['";]""", "", v)
         return values
@@ -49,7 +49,7 @@ class SQLRunner(AppenderPlugin):
         try:
             conn=session.connection()
             conn.connect()
-        except Exception,e:
+        except Exception as e:
             self.logger.error( "Database Connection failed: %s"%e)
             return
         
@@ -65,7 +65,7 @@ class SQLRunner(AppenderPlugin):
             try:
                 
                 addvalues['header_from']=self.stripAddress(from_header)
-            except Exception,e:
+            except Exception:
                 #use full from header
                 addvalues['header_from']=from_header
             
@@ -74,7 +74,7 @@ class SQLRunner(AppenderPlugin):
             self.logger.debug("Statement: %s"%replaced)
             try:
                 result=session.execute(replaced)
-            except Exception,e:
+            except Exception as e:
                 self.logger.error("Statement failed: statement=%s , error=%s"%(replaced,str(e)))
         session.remove()
 
@@ -88,7 +88,7 @@ class SQLRunner(AppenderPlugin):
         if start<1:
             start=address.find(':')+1
         if start<1:
-            raise ValueError,"Could not parse address %s"%address
+            raise ValueError("Could not parse address %s"%address)
         end = string.find(address, '>')
         if end<0:
             end=len(address)
@@ -104,20 +104,20 @@ class SQLRunner(AppenderPlugin):
     def lint(self):
         
         if not fuglu.extensions.sql.ENABLED:
-            print "Fuglu SQL Extensions not enabled"
+            print( "Fuglu SQL Extensions not enabled")
             return False
         
         connstring=self.config.get(self.section,'dbconnectstring')
         session=fuglu.extensions.sql.get_session(connstring)
         if session==None:
-            print "Could not create database session"
+            print("Could not create database session")
             return False
         
         try:
             conn=session.connection()
             conn.connect()
-        except Exception,e:
-            print "Database Connection failed: %s"%e
+        except Exception as e:
+            print("Database Connection failed: %s"%e)
             return False
         
         session.remove()

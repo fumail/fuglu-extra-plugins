@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from fuglu.shared import AppenderPlugin,DELETE,DUNNO,DEFER,string_to_actioncode,apply_template
+from fuglu.shared import AppenderPlugin,DUNNO
 
-from email.Header import decode_header
 import pysolr
 from email.utils import getaddresses,parsedate
 import datetime
 import time
 #we can't use cStringIO since pysolr wants a filename attribute set on while extracting which
 #we can't set on cStringIO
-import StringIO as strio
+try:
+    import StringIO as StringIO
+    from email.Header import decode_header
+except ImportError:
+    from io import StringIO
+    from email.header import decode_header
+    unicode = str
 
 class MailIndex(AppenderPlugin):
     """ Extract Mail fields and pass to SOLR
@@ -159,8 +164,8 @@ class MailIndex(AppenderPlugin):
             messagedata['headers_t']=suspect.get_headers()
 
         if self.config.getboolean(self.section,'index_content'):
-            msgcontent=strio.StringIO(suspect.get_source())
-            msgcontent.name='%s.eml'%(suspect.id)
+            msgcontent=StringIO.StringIO(suspect.get_source())
+            msgcontent.name='%s.eml'%suspect.id
             messagedata['content_t']=self.solr.extract(msgcontent)['contents']
 
         return messagedata
@@ -170,9 +175,9 @@ class MailIndex(AppenderPlugin):
             return None
         decodefrag = decode_header(msgrep[header])
         fragments = []
-        for s , enc in decodefrag:
+        for s, enc in decodefrag:
             if enc:
-                s = unicode(s , enc).encode('utf8','replace')
+                s = str(s).decode(enc,'replace').encode('utf8','replace')
             fragments.append(s)
         return ''.join(fragments)
 

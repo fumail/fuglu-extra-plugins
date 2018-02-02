@@ -1,7 +1,12 @@
 from fuglu.shared import ScannerPlugin,DUNNO,SuspectFilter
 import os
 import imaplib
-from urlparse import urlparse
+try:
+    #py2
+    from urlparse import urlparse
+except ImportError:
+    #py3
+    from urllib import parse as urlparse
 
 
 #TODO: reuse imap connections

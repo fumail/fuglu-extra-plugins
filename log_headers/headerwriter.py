@@ -1,5 +1,5 @@
-from fuglu.shared import ScannerPlugin,DUNNO,SuspectFilter,\
-    apply_template
+
+from fuglu.shared import ScannerPlugin,DUNNO,SuspectFilter, apply_template
 import time
 import os
 

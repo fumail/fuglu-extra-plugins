@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-from fuglu.shared import ScannerPlugin, DELETE, DUNNO, DEFER, string_to_actioncode, apply_template
+from fuglu.shared import ScannerPlugin, DUNNO, DEFER, string_to_actioncode, apply_template
 import re
 import shlex
 import subprocess
@@ -21,6 +21,10 @@ import threading
 import traceback
 from string import Template
 import tempfile
+import sys
+
+if sys.version_info.major >= 3:
+    basestring = str
 
 
 class Command(object):

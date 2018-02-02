@@ -2,9 +2,7 @@
 # let's see how far we get in implementing Spamassassin stuff in python
 import logging
 import os
-from pyparsing import infixNotation, opAssoc, Keyword, Word, alphas,ParseException,\
-    Literal, ParseResults,Regex, oneOf, OneOrMore, ZeroOrMore
-import string
+from pyparsing import infixNotation, opAssoc, ParseException, Literal, Regex, oneOf, ZeroOrMore
 import threading
 import email
 import re
@@ -133,7 +131,7 @@ class SARuleEvaluator(object):
     def run(self):
         threadlocal.evalfunc=self.eval_real
         
-        for rulename,rule in self.rules.iteritems():  #TODO: rule priority und so
+        for rulename,rule in iter(self.rules.items()):  #TODO: rule priority und so
             result=self.eval(rule)
             
     
@@ -180,7 +178,7 @@ class SARuleEvaluator(object):
                 if re.match(regex,headervalue)!=None:
                     return True
             return False
-        except Exception,e:
+        except Exception as e:
             self.logger.error("Could not compile regex %s: %s"%(arg,str(e)))
             return False
     
@@ -204,7 +202,7 @@ class SARuleEvaluator(object):
         #print "EVAL META: %s"%rule
         try:
             res = self.metaparser.parseString(rule.definition)[0]
-        except ParseException,p:
+        except ParseException as p:
             self.logger.warn("Did not understand meta rule %s : %s"%(rule.definition,str(p)))
             return False
         #print res
@@ -449,20 +447,20 @@ class PythonSA(object):
         evalrun=SARuleEvaluator(self.ruleconfig.rules, msgrep)
         evalrun.run()
         
-        print ""
+        print("")
         totalscore=0
-        for rulename,hit in evalrun.hitcache.iteritems():
+        for rulename,hit in iter(evalrun.hitcache.items()):
             if hit:
                 rule=self.ruleconfig.get_rule(rulename)
                 if rulename.startswith('__'):
-                    print "meta part hit: %s"%(rulename)
+                    print("meta part hit: %s"%(rulename))
                     score=0
                 else: 
                     score=rule.scores[0]
-                    print "rule hit: %s -> %s"%(rulename,score)
+                    print("rule hit: %s -> %s"%(rulename,score))
                 totalscore+=score
         
-        print "Total Score: %s"%totalscore
+        print("Total Score: %s"%totalscore)
                 
                     
     
@@ -501,7 +499,7 @@ if __name__ == '__main__':
             
         def get_rule_hit(self,rulename):
             if rulename not in self.knownrules:
-                print "warning: unknown rule reference: '%s' "%rulename
+                print("warning: unknown rule reference: '%s' "%rulename)
                 return False
             return self.knownrules[rulename]
     
@@ -516,9 +514,9 @@ if __name__ == '__main__':
            ("(__BLA + __BLUBB + __BLOING >=2)",True),
     ]
     for t,expected in tests:
-        print "Testing: %s"%t
+        print("Testing: %s"%t)
         res = boolExpr.parseString(t)[0]
         success = "PASS" if bool(res) == expected else "FAIL"
-        print t,'\n', res, '=', bool(res),'\n', success, '\n'
+        print(t,'\n', res, '=', bool(res),'\n', success, '\n')
     
     

@@ -46,8 +46,7 @@ class FuzorReport(ScannerPlugin):
             host=host,
             port=port,
             db=int(db),
-            socket_timeout=self.config.getint(self.section,
-                                              'timeout'))
+            socket_timeout=self.config.getint(self.section, 'timeout'))
         self.backend = RedisBackend(red)
         self.backend.ttl = self.config.getint(self.section, 'ttl')
 
@@ -308,8 +307,7 @@ class FuzorDigest(object):
         errors = "ignore"
         if not charset:
             charset = "ascii"
-        elif (charset.lower().replace("_", "-") in ("quopri-codec",
-              "quopri", "quoted-printable", "quotedprintable")):
+        elif (charset.lower().replace("_", "-") in ("quopri-codec", "quopri", "quoted-printable", "quotedprintable")):
             errors = "strict"
 
         try:

@@ -60,8 +60,8 @@ class FuzorReport(ScannerPlugin):
         fuhash = FuzorDigest(msg)
 
         try:
-            self.logger.info(
-                "DEBUG: suspect %s to=%s hash %s usable_body=%s predigest=%s subject=%s" %
+            self.logger.debug(
+                "suspect %s to=%s hash %s usable_body=%s predigest=%s subject=%s" %
                 (suspect.id, suspect.to_address, fuhash.digest, fuhash.bodytext_size, fuhash.predigest[:50], msg.get('Subject')))
         except Exception:
             pass
@@ -88,14 +88,14 @@ class FuzorReport(ScannerPlugin):
                 
                 reply = self.backend.redis.ping()
                 if reply:
-                    print 'OK: redis server replied to ping'
+                    print('OK: redis server replied to ping')
                 else:
                     ok = False
-                    print 'ERROR: redis server did not reply to ping'
+                    print('ERROR: redis server did not reply to ping')
 
             except redis.exceptions.ConnectionError as e:
                 ok = False
-                print 'ERROR: failed to talk to redis server: %s' % str(e)
+                print('ERROR: failed to talk to redis server: %s' % str(e))
         return ok
 
 
@@ -217,14 +217,14 @@ class FuzorCheck(ScannerPlugin):
                 
                 reply = self.backend.redis.ping()
                 if reply:
-                    print 'OK: redis server replied to ping'
+                    print('OK: redis server replied to ping')
                 else:
                     ok = False
-                    print 'ERROR: redis server did not reply to ping'
+                    print('ERROR: redis server did not reply to ping')
 
             except redis.exceptions.ConnectionError as e:
                 ok = False
-                print 'ERROR: failed to talk to redis server: %s' % str(e)
+                print('ERROR: failed to talk to redis server: %s' % str(e))
         return ok
     
 
@@ -395,5 +395,5 @@ if __name__ == '__main__':
     import email
     mymsg = email.message_from_file(sys.stdin)
     mydigest = FuzorDigest(mymsg)
-    print "Pre-digest: %s" % mydigest.predigest
-    print "Digest: %s" % mydigest.digest
+    print("Pre-digest: %s" % mydigest.predigest)
+    print("Digest: %s" % mydigest.digest)

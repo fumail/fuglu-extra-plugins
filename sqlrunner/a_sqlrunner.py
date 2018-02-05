@@ -1,5 +1,5 @@
 from fuglu.shared import AppenderPlugin,actioncode_to_string,apply_template
-import fuglu.extensions.sql
+from fuglu.extensions.sql import SQL_EXTENSION_ENABLED, get_session
 import re
 import string
 
@@ -31,18 +31,18 @@ class SQLRunner(AppenderPlugin):
     
     def sqlfix(self,values):
         for k,v in iter(values.copy().items()):
-            if type(v)==str:
+            if isinstance(v, str):
                 values[k]=re.sub("""['";]""", "", v)
         return values
         
     def process(self,suspect,decision):
-        if not fuglu.extensions.sql.ENABLED:
+        if not SQL_EXTENSION_ENABLED:
             self.logger.error("Fuglu SQL Extensions not enabled")
             return
         
         connstring=self.config.get(self.section,'dbconnectstring')
-        session=fuglu.extensions.sql.get_session(connstring)
-        if session==None:
+        session=get_session(connstring)
+        if session is None:
             self.logger.error("Could not create database session")
             return
         
@@ -57,13 +57,9 @@ class SQLRunner(AppenderPlugin):
         statementlist=self.get_statements()
         for statement in statementlist:
             self.logger.debug("Template: %s"%statement)
-            addvalues={
-                       'action':actioncode_to_string(decision),
-                       
-            }
+            addvalues={'action':actioncode_to_string(decision),}
             from_header=suspect.get_message_rep()['from']
             try:
-                
                 addvalues['header_from']=self.stripAddress(from_header)
             except Exception:
                 #use full from header
@@ -103,13 +99,13 @@ class SQLRunner(AppenderPlugin):
     
     def lint(self):
         
-        if not fuglu.extensions.sql.ENABLED:
+        if not SQL_EXTENSION_ENABLED:
             print( "Fuglu SQL Extensions not enabled")
             return False
         
         connstring=self.config.get(self.section,'dbconnectstring')
-        session=fuglu.extensions.sql.get_session(connstring)
-        if session==None:
+        session=get_session(connstring)
+        if session is None:
             print("Could not create database session")
             return False
         

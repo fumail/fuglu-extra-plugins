@@ -15,7 +15,7 @@ Recommended dependencies:
 
 
 from fuglu.shared import ScannerPlugin, DUNNO, get_default_cache
-from fuglu.extensions.sql import get_session, ENABLED
+from fuglu.extensions.sql import get_session, SQLALCHEMY_AVAILABLE
 import logging
 try:
     import SRS
@@ -218,7 +218,7 @@ class SenderRewriteScheme(ScannerPlugin):
         if not sqlquery.lower().startswith('select '):
             allok = False
             print('SQL statement must be a SELECT query')
-        if not ENABLED:
+        if not SQLALCHEMY_AVAILABLE:
             allok = False
             print('SQLAlchemy not available, cannot use SQL backend')
         if allok:

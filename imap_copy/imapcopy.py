@@ -1,11 +1,12 @@
+# -*- coding: UTF-8 -*-
 from fuglu.shared import ScannerPlugin,DUNNO,SuspectFilter
 import os
+import sys
 import imaplib
-try:
-    #py2
+
+if sys.version_info[0] == 2:
     from urlparse import urlparse
-except ImportError:
-    #py3
+if sys.version_info[0] >= 3:
     from urllib import parse as urlparse
 
 
@@ -151,7 +152,7 @@ The rulefile works similar to the archive plugin. As third column you have to pr
 
 
     def lint(self):
-        allok=(self.checkConfig() and self.lint_imap())
+        allok=(self.check_config() and self.lint_imap())
         return allok
 
     def lint_imap(self):

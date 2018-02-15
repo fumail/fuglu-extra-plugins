@@ -121,7 +121,7 @@ class URIExtract(ScannerPlugin):
             print("domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!")
             return False
         
-        return self.checkConfig()
+        return self.check_config()
 
 
 class EmailExtract(URIExtract):
@@ -245,7 +245,7 @@ class DomainAction(ScannerPlugin):
             print("domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!")
             return False
         
-        return self.checkConfig()        
+        return self.check_config()
 
 
 ######## TESTS ##############

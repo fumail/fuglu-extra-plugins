@@ -200,7 +200,7 @@ class SenderRewriteScheme(ScannerPlugin):
     
     
     def lint(self):
-        allok = self.checkConfig()
+        allok = self.check_config()
         if not HAVE_SRS:
             allok = False
             print('SRS library not found')

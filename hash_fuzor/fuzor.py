@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 from fuglu.shared import ScannerPlugin, SuspectFilter, DUNNO
 import hashlib
 import re
@@ -80,7 +81,7 @@ class FuzorReport(ScannerPlugin):
     
     
     def lint(self):
-        ok = self.checkConfig()
+        ok = self.check_config()
         if ok:
             try:
                 self._init_backend()
@@ -209,7 +210,7 @@ class FuzorCheck(ScannerPlugin):
     
     
     def lint(self):
-        ok = self.checkConfig()
+        ok = self.check_config()
         if ok:
             try:
                 self._init_backend()

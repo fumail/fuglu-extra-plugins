@@ -178,7 +178,7 @@ class EBLLookup(ScannerPlugin):
         print('querying zone %s' % dnszone)
         
         lint_ok = True
-        if not self.checkConfig():
+        if not self.check_config():
             print('Error checking config')
             lint_ok = False
             

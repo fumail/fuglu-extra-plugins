@@ -1,5 +1,5 @@
+# -*- coding: UTF-8 -*-
 from fuglu.shared import ScannerPlugin,apply_template, DEFER,DUNNO,SuspectFilter
-
 import time
 import os
 import mailbox
@@ -43,7 +43,7 @@ class LDAPlugin(ScannerPlugin):
         }
         
     def lint(self):
-        allok=self.checkConfig()
+        allok=self.check_config()
         
         filterfile=self.config.get(self.section, 'filterfile','').strip()
         

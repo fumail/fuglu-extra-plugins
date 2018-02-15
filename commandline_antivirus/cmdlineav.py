@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 #   Copyright 2009-2015 Oli Schacher
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +24,7 @@ from string import Template
 import tempfile
 import sys
 
-if sys.version_info.major >= 3:
+if sys.version_info[0] >= 3:
     basestring = str
 
 
@@ -220,7 +221,7 @@ Tags:
         return 'Generic Commandline AV'
 
     def lint(self):
-        allok = (self.checkConfig() and self.lint_eicar())
+        allok = self.check_config() and self.lint_eicar()
         return allok
 
     def lint_eicar(self):

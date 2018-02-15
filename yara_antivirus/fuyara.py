@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 from fuglu.shared import ScannerPlugin, string_to_actioncode, DUNNO
 import zipfile
 from email.header import decode_header
@@ -246,7 +247,7 @@ class YARAPlugin(ScannerPlugin):
         return "".join([x for x in stri if ord(x) < 128])
 
     def lint(self):
-        allok=(self.checkConfig() and self.lint_dependencies() and self.lint_rules())
+        allok=(self.check_config() and self.lint_dependencies() and self.lint_rules())
         return allok
 
     def lint_dependencies(self):

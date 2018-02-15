@@ -67,7 +67,7 @@ class DspamPlugin(ScannerPlugin):
     
     
     def lint(self):
-        allok = self.checkConfig()
+        allok = self.check_config()
         self._lint_gtube()
         return allok
     

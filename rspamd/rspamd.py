@@ -100,7 +100,7 @@ class RSpamdPlugin(ScannerPlugin):
     
     
     def lint(self):
-        allok = self.checkConfig()
+        allok = self.check_config()
         # further checks are not easy to implement:
         # - rspamd does not support gtube
         # - no lint function implemented in workers

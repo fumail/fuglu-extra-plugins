@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template
+from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template,FileList
 import unittest
 import logging
 try:
@@ -197,18 +197,45 @@ class DomainAction(ScannerPlugin):
                 'default':'10',
                 'description':'maximum number of domains to check per message',
             },
+            'extra_tld_file': {
+                'default':'',
+                'description':'directory containing files with extra TLDs (2TLD or inofficial TLDs)'
+            },
         }
         
         self.rbllookup=None
         self.tldmagic=None
+        self.extratlds=None
+        self.lasttlds=None
+        
+        
+    def _init_tldmagic(self):
+        init_tldmagic = False
+        extratlds = []
+        
+        if self.extratlds is None:
+            extratldfile = self.config.get(self.section,'extra_tld_file')
+            if extratldfile and os.path.exists(extratldfile):
+                self.extratlds = FileList(extratldfile, lowercase=True)
+                init_tldmagic = True
+        
+        if self.extratlds is not None:
+            extratlds = self.extratlds.get_list()
+            if self.lasttlds != extratlds: # extra tld file changed
+                self.lasttlds = extratlds
+                init_tldmagic = True
+        
+        if self.tldmagic is None or init_tldmagic:
+            self.tldmagic = TLDMagic()
+            for tld in extratlds: # add extra tlds to tldmagic
+                self.tldmagic.add_tld(tld)
     
     
     def examine(self,suspect):
         if self.rbllookup is None:
             self.rbllookup = RBLLookup()
             self.rbllookup.from_config(self.config.get(self.section,'blacklistconfig'))
-        if self.tldmagic is None:
-            self.tldmagic = TLDMagic()
+        self._init_tldmagic()
 
         urls=suspect.get_tag('body.uris',defaultvalue=[])
         #self.logger.info("Body URIs to check: %s"%urls)
@@ -241,11 +268,21 @@ class DomainAction(ScannerPlugin):
     
     
     def lint(self):
+        allok = True
         if not DOMAINMAGIC_AVAILABLE:
-            print("domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!")
-            return False
+            print("ERROR: domainmagic lib or one of its dependencies (dnspython/pygeoip) is not installed!")
+            allok = False
         
-        return self.check_config()
+        if allok:
+            allok = self.check_config()
+        
+        if allok:
+            extratldfile = self.config.get(self.section,'extra_tld_file')
+            if extratldfile and not os.path.exists(extratldfile):
+                allok = False
+                print('WARNING: invalid extra_tld_file %s specified' % extratldfile)
+        
+        return allok
 
 
 ######## TESTS ##############

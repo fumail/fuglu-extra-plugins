@@ -117,11 +117,15 @@ class URIExtract(ScannerPlugin):
     
     
     def lint(self):
+        allok = True
         if not DOMAINMAGIC_AVAILABLE:
-            print("domainmagic lib or one of it's dependencies(dnspython/pygeoip) is not installed!")
-            return False
+            print("ERROR: domainmagic lib or one of its dependencies (dnspython/pygeoip) is not installed!")
+            allok = False
         
-        return self.check_config()
+        if allok:
+            allok = self.check_config()
+        
+        return allok
 
 
 class EmailExtract(URIExtract):

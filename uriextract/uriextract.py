@@ -2,6 +2,7 @@
 from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template,FileList
 import unittest
 import logging
+import os
 try:
     #py2
     import ConfigParser

@@ -60,17 +60,27 @@ class URIExtract(ScannerPlugin):
 
 
     def _run(self,suspect):
+        if not DOMAINMAGIC_AVAILABLE:
+            self.logger.info('Not scanning - Domainmagic not available')
+            return DUNNO
+        
         maxsize = self.config.getint(self.section, 'maxsize')
         if suspect.size>maxsize:
             self.logger.info('Not scanning - message too big (message %s  bytes > config %s bytes )' % (suspect.size, maxsize))
             return DUNNO
 
         self._prepare()
-
-        textparts=" ".join(self.get_decoded_textparts(suspect))
-        uris=self.extractor.extracturis(textparts)
+        
+        uris = []
+        for content in self.get_decoded_textparts(suspect):
+            try:
+                parturis=self.extractor.extracturis(content)
+                uris.append(parturis)
+            except Exception as e:
+                self.logger.error('%s failed to extract URIs from msg part: %s' % (suspect.id, str(e)))
+            
         if self.config.getboolean(self.section,'loguris'):
-            self.logger.info('Extracted URIs: %s'%uris)
+            self.logger.info('%s Extracted URIs: %s' % (suspect.id, uris))
         suspect.set_tag('body.uris',uris)
         return DUNNO
         
@@ -144,6 +154,10 @@ class EmailExtract(URIExtract):
     
     
     def examine(self,suspect):
+        if not DOMAINMAGIC_AVAILABLE:
+            self.logger.info('Not scanning - Domainmagic not available')
+            return DUNNO
+        
         maxsize = self.config.getint(self.section, 'maxsize')
         if suspect.size>maxsize:
             self.logger.info('Not scanning - message too big (message %s  bytes > config %s bytes )' % (suspect.size, maxsize))
@@ -237,6 +251,10 @@ class DomainAction(ScannerPlugin):
     
     
     def examine(self,suspect):
+        if not DOMAINMAGIC_AVAILABLE:
+            self.logger.info('Not scanning - Domainmagic not available')
+            return DUNNO
+        
         if self.rbllookup is None:
             self.rbllookup = RBLLookup()
             self.rbllookup.from_config(self.config.get(self.section,'blacklistconfig'))

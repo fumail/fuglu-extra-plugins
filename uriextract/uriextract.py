@@ -75,7 +75,7 @@ class URIExtract(ScannerPlugin):
         for content in self.get_decoded_textparts(suspect):
             try:
                 parturis=self.extractor.extracturis(content)
-                uris.append(parturis)
+                uris.extend(parturis)
             except Exception as e:
                 self.logger.error('%s failed to extract URIs from msg part: %s' % (suspect.id, str(e)))
             

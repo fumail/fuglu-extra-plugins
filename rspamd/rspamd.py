@@ -175,6 +175,8 @@ class RSpamdPlugin(ScannerPlugin):
             response = conn.getresponse()
             #response.status, response.reason
             jsondata = response.read()
+            if isinstance(jsondata, bytes): # python3
+                jsondata = jsondata.decode('utf-8')
             reply = json.loads(jsondata)
         except Exception as e:
             reply = None

@@ -108,7 +108,7 @@ class URIExtract(ScannerPlugin):
             contenttype=part.get_content_type()
             
             if contenttype.startswith('text/') or fname.endswith(".txt") or fname.endswith(".html") or fname.endswith(".htm"):
-                payload=part.get_payload(None,True)
+                payload=part.get_payload() # setting encode=True will return bytes in python3
                 if 'html' in contenttype or '.htm' in fname: #remove newlines from html so we get uris spanning multiple lines
                     payload=payload.replace('\n', '').replace('\r', '')
                 try:

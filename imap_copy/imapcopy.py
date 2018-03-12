@@ -99,7 +99,7 @@ The rulefile works similar to the archive plugin. As third column you have to pr
                 imap=imaplib.IMAP4_SSL(host=host,port=port)
             else:
                 imap=imaplib.IMAP4(host=host,port=port)
-        except Exception,e:
+        except Exception as e:
             ltype='IMAP'
             if ssl:
                 ltype='IMAP-SSL'
@@ -112,7 +112,7 @@ The rulefile works similar to the archive plugin. As third column you have to pr
         
         try:
             imap.login(username,password)
-        except Exception,e:
+        except Exception as e:
             msg="Login to server %s failed: %s"%(host,str(e))
             if lintmode:
                 print(msg)

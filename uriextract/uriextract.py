@@ -30,12 +30,11 @@ class URIExtract(ScannerPlugin):
     
     def __init__(self,config,section=None):
         ScannerPlugin.__init__(self,config,section)
+        self.logger = self._logger()
         self.extractor=None
-        
-        self.logger=logging.getLogger('fuglu.plugin.URIExtract')
         self.htmlparser = HTMLParser()
                 
-        self.requiredvars={       
+        self.requiredvars = {
             'domainskiplist':{
                 'default':'/etc/fuglu/extract-skip-domains.txt',
                 'description':'Domain skip list',
@@ -142,14 +141,17 @@ class URIExtract(ScannerPlugin):
 class EmailExtract(URIExtract):
     def __init__(self,config,section=None):
         URIExtract.__init__(self,config,section)
-        self.logger=logging.getLogger('fuglu.plugin.EmailExtract')
-        self.requiredvars['headers']={
+        self.logger = self._logger()
+        self.requiredvars = {
+            'headers': {
                 'default':'Return-Path,Reply-To,From,X-RocketYMMF,X-Original-Sender,Sender,X-Originating-Email,Envelope-From,Disposition-Notification-To', 
                 'description':'comma separated list of headers to check for adresses to extract'
-        }
-        self.requiredvars['skipheaders']={
-              'default':'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To',
-              'description':'comma separated list of headers with email adresses that should be skipped in body search'             
+            },
+            
+            'skipheaders': {
+                'default':'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To',
+                'description':'comma separated list of headers with email adresses that should be skipped in body search'
+            },
         }
     
     
@@ -193,7 +195,7 @@ class DomainAction(ScannerPlugin):
     
     def __init__(self,config,section=None):
         ScannerPlugin.__init__(self,config,section)
-        self.logger=logging.getLogger('fuglu.plugin.DomainAction')
+        self.logger = self._logger()
     
         self.requiredvars={       
             'blacklistconfig':{

@@ -42,7 +42,7 @@ class RSpamdPlugin(ScannerPlugin):
 
             'timeout': {
                 'default': '30',
-                'description': 'how long should we wait for an answer from sa',
+                'description': 'how long should we wait for an answer from rspamd',
             },
 
             'maxsize': {

@@ -155,7 +155,7 @@ class EmailExtract(URIExtract):
         }
     
     
-    def examine(self,suspect):
+    def _run(self,suspect):
         if not DOMAINMAGIC_AVAILABLE:
             self.logger.info('Not scanning - Domainmagic not available')
             return DUNNO

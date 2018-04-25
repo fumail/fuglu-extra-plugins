@@ -288,7 +288,7 @@ class FuzorDigest(object):
         if self.bodytext_size < self.MINIMUM_BODYTEXT_SIZE:
             return None
         predigest = predigest.strip()
-        if isinstance(predigest, unicode):
+        if sys.version_info == (2,) and isinstance(predigest, unicode):
             predigest = predigest.encode('utf-8', 'ignore')
         if len(predigest) < self.MINIMUM_PREDIGEST_SIZE:
             return None

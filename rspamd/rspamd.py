@@ -42,7 +42,7 @@ class RSpamdPlugin(ScannerPlugin):
 
             'timeout': {
                 'default': '30',
-                'description': 'how long should we wait for an answer from sa',
+                'description': 'how long should we wait for an answer from rspamd',
             },
 
             'maxsize': {
@@ -175,6 +175,8 @@ class RSpamdPlugin(ScannerPlugin):
             response = conn.getresponse()
             #response.status, response.reason
             jsondata = response.read()
+            if isinstance(jsondata, bytes): # python3
+                jsondata = jsondata.decode('utf-8')
             reply = json.loads(jsondata)
         except Exception as e:
             reply = None

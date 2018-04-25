@@ -2,6 +2,7 @@
 from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template,FileList
 import unittest
 import logging
+import os
 try:
     #py2
     import ConfigParser
@@ -29,12 +30,11 @@ class URIExtract(ScannerPlugin):
     
     def __init__(self,config,section=None):
         ScannerPlugin.__init__(self,config,section)
+        self.logger = self._logger()
         self.extractor=None
-        
-        self.logger=logging.getLogger('fuglu.plugin.URIExtract')
         self.htmlparser = HTMLParser()
                 
-        self.requiredvars={       
+        self.requiredvars = {
             'domainskiplist':{
                 'default':'/etc/fuglu/extract-skip-domains.txt',
                 'description':'Domain skip list',
@@ -59,17 +59,27 @@ class URIExtract(ScannerPlugin):
 
 
     def _run(self,suspect):
+        if not DOMAINMAGIC_AVAILABLE:
+            self.logger.info('Not scanning - Domainmagic not available')
+            return DUNNO
+        
         maxsize = self.config.getint(self.section, 'maxsize')
         if suspect.size>maxsize:
             self.logger.info('Not scanning - message too big (message %s  bytes > config %s bytes )' % (suspect.size, maxsize))
             return DUNNO
 
         self._prepare()
-
-        textparts=" ".join(self.get_decoded_textparts(suspect))
-        uris=self.extractor.extracturis(textparts)
+        
+        uris = []
+        for content in self.get_decoded_textparts(suspect):
+            try:
+                parturis=self.extractor.extracturis(content)
+                uris.extend(parturis)
+            except Exception as e:
+                self.logger.error('%s failed to extract URIs from msg part: %s' % (suspect.id, str(e)))
+            
         if self.config.getboolean(self.section,'loguris'):
-            self.logger.info('Extracted URIs: %s'%uris)
+            self.logger.info('%s Extracted URIs: %s' % (suspect.id, uris))
         suspect.set_tag('body.uris',uris)
         return DUNNO
         
@@ -97,7 +107,7 @@ class URIExtract(ScannerPlugin):
             contenttype=part.get_content_type()
             
             if contenttype.startswith('text/') or fname.endswith(".txt") or fname.endswith(".html") or fname.endswith(".htm"):
-                payload=part.get_payload(None,True)
+                payload=part.get_payload() # setting encode=True will return bytes in python3
                 if 'html' in contenttype or '.htm' in fname: #remove newlines from html so we get uris spanning multiple lines
                     payload=payload.replace('\n', '').replace('\r', '')
                 try:
@@ -131,18 +141,25 @@ class URIExtract(ScannerPlugin):
 class EmailExtract(URIExtract):
     def __init__(self,config,section=None):
         URIExtract.__init__(self,config,section)
-        self.logger=logging.getLogger('fuglu.plugin.EmailExtract')
-        self.requiredvars['headers']={
+        self.logger = self._logger()
+        self.requiredvars = {
+            'headers': {
                 'default':'Return-Path,Reply-To,From,X-RocketYMMF,X-Original-Sender,Sender,X-Originating-Email,Envelope-From,Disposition-Notification-To', 
                 'description':'comma separated list of headers to check for adresses to extract'
-        }
-        self.requiredvars['skipheaders']={
-              'default':'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To',
-              'description':'comma separated list of headers with email adresses that should be skipped in body search'             
+            },
+            
+            'skipheaders': {
+                'default':'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To',
+                'description':'comma separated list of headers with email adresses that should be skipped in body search'
+            },
         }
     
     
-    def examine(self,suspect):
+    def _run(self,suspect):
+        if not DOMAINMAGIC_AVAILABLE:
+            self.logger.info('Not scanning - Domainmagic not available')
+            return DUNNO
+        
         maxsize = self.config.getint(self.section, 'maxsize')
         if suspect.size>maxsize:
             self.logger.info('Not scanning - message too big (message %s  bytes > config %s bytes )' % (suspect.size, maxsize))
@@ -178,7 +195,7 @@ class DomainAction(ScannerPlugin):
     
     def __init__(self,config,section=None):
         ScannerPlugin.__init__(self,config,section)
-        self.logger=logging.getLogger('fuglu.plugin.DomainAction')
+        self.logger = self._logger()
     
         self.requiredvars={       
             'blacklistconfig':{
@@ -236,6 +253,10 @@ class DomainAction(ScannerPlugin):
     
     
     def examine(self,suspect):
+        if not DOMAINMAGIC_AVAILABLE:
+            self.logger.info('Not scanning - Domainmagic not available')
+            return DUNNO
+        
         if self.rbllookup is None:
             self.rbllookup = RBLLookup()
             self.rbllookup.from_config(self.config.get(self.section,'blacklistconfig'))

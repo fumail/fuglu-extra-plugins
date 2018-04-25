@@ -1,35 +1,39 @@
-
-```
 This is a generic rolling window rate limiting plugin. It allows limiting the amount of accepted messages based on any combination of supported SuspectFilter fields.
     This means you could for example limit the number of similar subjects by sender domain to implement a simple bulk filter.
 
 Important notes:
-    - This plugin is experimental and has not been tested in production
-    - This plugin only makes sense in pre-queue mode.
-    - The content filter stage is usually *not* the best place to implement rate-limiting.
+ * This plugin is experimental and has not been tested in production
+ * This plugin only makes sense in pre-queue mode.
+ * The content filter stage is usually *not* the best place to implement rate-limiting.
       Faster options are postfix built-in rate limits or a policy access daemon
       which doesn't need to accept the full message to make a decision
-    - the backends don't automatically perform global expiration of all events.
+ * the backends don't automatically perform global expiration of all events.
       Old entries are only cleared per event the next time the same event happens.
       Add a cron job for your backend to clear all old events from time to time.
 
 Supported backends:
-    - memory: stores events in memory. Do not use this in production.
-    - sqlalchemy: Stores events in a SQL database. Recommended for small/low-traffic setups
-    - redis: stores events in a redis database. This is the fastest and therefore recommended backend.
+
+ * memory: stores events in memory. Do not use this in production.
+ * sqlalchemy: Stores events in a SQL database. Recommended for small/low-traffic setups
+  * redis: stores events in a redis database. This is the fastest and therefore recommended backend.
 
 Configuration example for redis. Prerequisite: python redis module
+```
     backendtype = redis
     backendconfig = localhost:6379:0
+```
 
 Configuration example for mysql: Prerequisite: python sqlalchemy module. The database must exist. The table will be created automatically.
+
+```
     backendtype = sqlalchemy
     backendconfig = mysql://root@localhost/fuglu
+```
 
 ratelimit.conf format: (not final yet)
 
 Each limiter is defined by a line which must match the following format. Each limiter is evaluated in the order specified.
-```
+
 limit name=**name** rate=**max**/**timeframe** fields=**fieldlist** [match=/**filter regex**/ [skip=**skiplist** ]] action=**action** message=**message**
 
  * **name**        : a descriptive name for this filter, one word. Required to reference in skip lists

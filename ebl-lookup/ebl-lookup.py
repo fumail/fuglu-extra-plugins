@@ -214,7 +214,7 @@ class EBLLookup(ScannerPlugin):
         normalisation = self.config.get(self.section,'normalisation')
         if normalisation not in ['ebl', 'low']:
             lint_ok = False
-            print('unsupported normalsation type %s' % normalisation)
+            print('unsupported normalisation type %s' % normalisation)
             
         if lint_ok:
             addr_hash = self._create_hash('noemail@example.com')

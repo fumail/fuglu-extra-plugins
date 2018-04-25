@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 from fuglu.shared import ScannerPlugin, DUNNO, string_to_actioncode, apply_template, FileList
-from fuglu.extensions.dnsquery import lookup, HAVE_DNS
+from fuglu.extensions.dnsquery import lookup, DNSQUERY_EXTENSION_ENABLED
 import re
 import hashlib
 

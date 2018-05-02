@@ -1,7 +1,12 @@
 # -*- coding: UTF-8 -*-
 
-
 """
+ATTENTION:
+This plugin is now part of the fuglu main development branch on https://github.com/fumail/fuglu
+It will be removed from here shortly.
+Please update your fuglu installation and change the plugins= configuration line to load the stock plugin
+
+
 SRS (Sender Rewriting Scheme) Plugin
 This plugin encrypts envelope sender and decrypts bounce recpient addresses with SRS
 As opposed to postsrsd it decides by RECIPIENT address whether sender address should be rewritten.
@@ -200,6 +205,7 @@ class SenderRewriteScheme(ScannerPlugin):
     
     
     def lint(self):
+        print('WARNING: this plugin version is deprecated. Please use the stock plugin')
         allok = self.check_config()
         if not HAVE_SRS:
             allok = False

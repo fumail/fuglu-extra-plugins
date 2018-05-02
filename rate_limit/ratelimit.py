@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import time
 from threading import Lock
 from fuglu.shared import ScannerPlugin, DUNNO, string_to_actioncode, SuspectFilter, apply_template
@@ -13,7 +14,7 @@ except ImportError:
     redis = None
     REDIS_AVAILABLE = 0
 
-if sys.version_info.major >= 3:
+if sys.version_info > (3,):
     unicode = str
 
 
@@ -120,28 +121,19 @@ if REDIS_AVAILABLE:
     AVAILABLE_RATELIMIT_BACKENDS['redis']=RedisBackend
 
 if SQL_EXTENSION_ENABLED:
-    from sqlalchemy import Table, Column, Integer,  Unicode,BigInteger, Index
+    from sqlalchemy import Column, Integer,  Unicode,BigInteger, Index
     from sqlalchemy.sql import and_
     from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import mapper
     DeclarativeBase = declarative_base()
     metadata = DeclarativeBase.metadata
-
-    class Event(object):
-        def __init__(self):
-            self.eventname = None
-            self.occurence = None
-
-    ratelimit_table = Table("fuglu_ratelimit", metadata,
-                            Column('id', BigInteger, primary_key=True),
-                            Column('eventname', Unicode(255), nullable=False),
-                            Column('occurence', Integer, nullable=False),
-                            Index('udx_ev_oc', 'eventname', 'occurence'),
-                            )
-    ratelimit_mapper = mapper(Event, ratelimit_table)
-
-
-
+    
+    class Event(DeclarativeBase):
+        __tablename__ = 'postomaat_ratelimit'
+        eventid = Column(BigInteger, primary_key=True)
+        eventname = Column(Unicode(255), nullable=False)
+        occurence = Column(Integer, nullable=False)
+        __table_args__ = (Index('udx_ev_oc', 'eventname', 'occurence'),)
+    
     class SQLAlchemyBackend(RollingWindowBackend):
         def _fix_eventname(self,eventname):
             if isinstance(eventname, unicode):

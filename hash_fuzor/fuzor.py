@@ -288,17 +288,14 @@ class FuzorDigest(object):
         if self.bodytext_size < self.MINIMUM_BODYTEXT_SIZE:
             return None
         predigest = predigest.strip()
-        if sys.version_info == (2,) and isinstance(predigest, unicode):
-            predigest = predigest.encode('utf-8', 'ignore')
         if len(predigest) < self.MINIMUM_PREDIGEST_SIZE:
             return None
         unmodified = re.sub(r'\[[A-Z0-9:]+\]', '', predigest)
         if len(unmodified) < self.MINIMUM_UNMODIFIED_CONTENT:
             return None
-        try:
-            return hashlib.sha1(predigest).hexdigest()
-        except UnicodeEncodeError:
-            return None
+
+        predigest=predigest.encode('utf-8',errors='ignore')
+        return hashlib.sha1(predigest).hexdigest()
 
 
 

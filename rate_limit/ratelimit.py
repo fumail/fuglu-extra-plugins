@@ -6,7 +6,8 @@ from fuglu.extensions.sql import SQL_EXTENSION_ENABLED, get_session
 import re
 import os
 import sys
-from hashlib import md5
+import hashlib
+
 try:
     import redis
     REDIS_AVAILABLE = 1
@@ -17,68 +18,74 @@ except ImportError:
 if sys.version_info > (3,):
     unicode = str
 
+AVAILABLE_RATELIMIT_BACKENDS = {}
 
-AVAILABLE_RATELIMIT_BACKENDS={}
+
+def hash_eventname(eventname):
+    if type(eventname)==unicode:
+        eventname=eventname.encode('utf-8')
+    eventname = hashlib.sha1(eventname).hexdigest()
+    return eventname
 
 class RollingWindowBackend(object):
-    def __init__(self,backendconfig):
+    def __init__(self, backendconfig):
         self._real_init(backendconfig)
 
-    def check_count(self,eventname,timediff):
+    def check_count(self, eventname, timediff):
         """record a event. Returns the current count"""
-        now=self.add(eventname)
-        then=now-timediff
-        self.clear(eventname,then)
+        now = self.add(eventname)
+        then = now - timediff
+        self.clear(eventname, then)
         count = self.count(eventname)
         return count
 
-    def check_allowed(self,eventname,timediff,limit):
-        count = self.check_count(eventname,timediff)
-        return count<=limit
+    def check_allowed(self, eventname, timediff, limit):
+        count = self.check_count(eventname, timediff)
+        return count <= limit
 
-    def add(self,eventname):
+    def add(self, eventname):
         """add a tick to the event and return its timestamp"""
-        now=time.time()
-        self._real_add(eventname,now)
+        now = time.time()
+        self._real_add(eventname, now)
         return now
 
-    def clear(self,eventname,abstime=None):
+    def clear(self, eventname, abstime=None):
         """clear events before abstime in secs. if abstime is not provided, clears the whole queue"""
         if abstime is None:
-            abstime=int(time.time())
-        self._real_clear(eventname,abstime)
+            abstime = int(time.time())
+        self._real_clear(eventname, abstime)
 
-    def count(self,eventname):
+    def count(self, eventname):
         """return the current number of events in the queue"""
         return self._real_count(eventname)
 
     ## -- override these in other backends
 
-    def _real_init(self,config):
-        self.memdict={}
+    def _real_init(self, config):
+        self.memdict = {}
         self.lock = Lock()
 
-    def _real_add(self,eventname,timestamp): #override this!
+    def _real_add(self, eventname, timestamp):  # override this!
         self.lock.acquire()
         if eventname in self.memdict:
             self.memdict[eventname].append(timestamp)
         else:
-            self.memdict[eventname]=[timestamp,]
+            self.memdict[eventname] = [timestamp, ]
         self.lock.release()
 
-    def _real_clear(self,eventname,abstime):
+    def _real_clear(self, eventname, abstime):
         if eventname not in self.memdict:
             return
         self.lock.acquire()
         try:
-            while self.memdict[eventname][0]<abstime:
+            while self.memdict[eventname][0] < abstime:
                 del self.memdict[eventname][0]
-        except IndexError: #empty list, remove
+        except IndexError:  # empty list, remove
             del self.memdict[eventname]
 
         self.lock.release()
 
-    def _real_count(self,eventname):
+    def _real_count(self, eventname):
         self.lock.acquire()
         try:
             count = len(self.memdict[eventname])
@@ -87,97 +94,92 @@ class RollingWindowBackend(object):
         self.lock.release()
         return count
 
-AVAILABLE_RATELIMIT_BACKENDS['memory']=RollingWindowBackend
+
+AVAILABLE_RATELIMIT_BACKENDS['memory'] = RollingWindowBackend
 
 if REDIS_AVAILABLE:
-    class RedisBackend(RollingWindowBackend): # TODO
-        def _fix_eventname(self,eventname):
-            if len(eventname)>255:
-                eventname = md5(eventname).hexdigest()
-            return eventname
-
-        def _real_init(self,backendconfig):
+    class RedisBackend(RollingWindowBackend):  # TODO
+        def _real_init(self, backendconfig):
             parts = backendconfig.split(':')
             host = parts[0]
-            if len(parts)>1:
+            if len(parts) > 1:
                 port = int(parts[1])
             else:
                 port = 6379
-            if len(parts)>2:
+            if len(parts) > 2:
                 db = int(parts[2])
             else:
                 db = 0
-            self.redis = redis.StrictRedis(host=host,port=port,db=db)
+            self.redis = redis.StrictRedis(host=host, port=port, db=db)
 
-        def _real_add(self,eventname,timestamp):
-            self.redis.zadd(self._fix_eventname(eventname), timestamp, timestamp)
+        def _real_add(self, eventname, timestamp):
+            self.redis.zadd(hash_eventname(eventname), timestamp, timestamp)
 
-        def _real_clear(self,eventname,abstime):
-            self.redis.zremrangebyscore(self._fix_eventname(eventname), '-inf', abstime)
+        def _real_clear(self, eventname, abstime):
+            self.redis.zremrangebyscore(hash_eventname(eventname), '-inf', abstime)
 
-        def _real_count(self,eventname):
-            return self.redis.zcard(self._fix_eventname(eventname))
+        def _real_count(self, eventname):
+            return self.redis.zcard(hash_eventname(eventname))
 
-    AVAILABLE_RATELIMIT_BACKENDS['redis']=RedisBackend
+
+    AVAILABLE_RATELIMIT_BACKENDS['redis'] = RedisBackend
 
 if SQL_EXTENSION_ENABLED:
-    from sqlalchemy import Column, Integer,  Unicode,BigInteger, Index
+    from sqlalchemy import Column, Integer, Unicode, BigInteger, Index
     from sqlalchemy.sql import and_
     from sqlalchemy.ext.declarative import declarative_base
+
     DeclarativeBase = declarative_base()
     metadata = DeclarativeBase.metadata
-    
+
+
     class Event(DeclarativeBase):
         __tablename__ = 'postomaat_ratelimit'
         eventid = Column(BigInteger, primary_key=True)
         eventname = Column(Unicode(255), nullable=False)
         occurence = Column(Integer, nullable=False)
         __table_args__ = (Index('udx_ev_oc', 'eventname', 'occurence'),)
-    
-    class SQLAlchemyBackend(RollingWindowBackend):
-        def _fix_eventname(self,eventname):
-            if isinstance(eventname, unicode):
-                eventname = unicode(eventname)
-            if len(eventname)>255:
-                eventname = unicode(md5(eventname).hexdigest())
-            return eventname
 
-        def _real_init(self,backendconfig):
+
+    class SQLAlchemyBackend(RollingWindowBackend):
+        def _real_init(self, backendconfig):
             self.session = get_session(backendconfig)
             metadata.create_all(bind=self.session.bind)
 
-        def _real_add(self,eventname,timestamp):
+        def _real_add(self, eventname, timestamp):
             ev = Event()
-            ev.eventname = self._fix_eventname(eventname)
+            ev.eventname = hash_eventname(eventname)
             ev.occurence = int(timestamp)
             self.session.add(ev)
             self.session.flush()
 
-        def _real_clear(self,eventname,abstime):
-            eventname = self._fix_eventname(eventname)
-            self.session.query(Event).filter(and_(Event.eventname==eventname, Event.occurence < abstime)).delete()
+        def _real_clear(self, eventname, abstime):
+            eventname = hash_eventname(eventname)
+            self.session.query(Event).filter(and_(Event.eventname == eventname, Event.occurence < abstime)).delete()
             self.session.flush()
 
-        def _real_count(self,eventname):
-            eventname = self._fix_eventname(eventname)
+        def _real_count(self, eventname):
+            eventname = hash_eventname(eventname)
             result = self.session.query(Event).filter(Event.eventname == eventname).count()
             return result
 
-    AVAILABLE_RATELIMIT_BACKENDS['sqlalchemy']=SQLAlchemyBackend
+
+    AVAILABLE_RATELIMIT_BACKENDS['sqlalchemy'] = SQLAlchemyBackend
+
 
 class Limiter(object):
     def __init__(self):
         self.name = None
-        self.max = -1 # negative value: no limit
+        self.max = -1  # negative value: no limit
         self.timespan = 1
-        self.fields=[]
+        self.fields = []
         self.regex = None
         self.skip = None
         self.action = DUNNO
         self.message = 'Limit exceeded'
 
     def __str__(self):
-        return "<Limiter name=%s rate=%s/%s fields=%s>"%(self.name,self.max,self.timespan,",".join(self.fields))
+        return "<Limiter name=%s rate=%s/%s fields=%s>" % (self.name, self.max, self.timespan, ",".join(self.fields))
 
 
 class RateLimitPlugin(ScannerPlugin):
@@ -239,6 +241,7 @@ class RateLimitPlugin(ScannerPlugin):
     limit name=serverhelo rate=100/3600 fields=clienthelo,subject action=REJECT message=Bulk message detected
 
     """
+
     def __init__(self, config, section=None):
         ScannerPlugin.__init__(self, config, section)
         self.requiredvars = {
@@ -248,12 +251,12 @@ class RateLimitPlugin(ScannerPlugin):
                 'description': 'file based rate limits',
             },
 
-            'backendtype':{
+            'backendtype': {
                 'default': 'memory',
                 'description': 'type of backend where the events are stored. memory is only recommended for low traffic standalone systems. alternatives are: redis, sqlalchemy'
             },
 
-            'backendconfig':{
+            'backendconfig': {
                 'default': '',
                 'description': 'backend specific configuration. sqlalchemy: the database url, redis: hostname:port:db'
             }
@@ -265,19 +268,20 @@ class RateLimitPlugin(ScannerPlugin):
         self.limiters = None
         self.filter = SuspectFilter(None)
 
-    #TODO: make action and message optional
-    def load_limiter_config(self,text):
-        patt = re.compile(r'^limit\s+name=(?P<name>[^\s]+)\s+rate=(?P<max>\-?\d{1,10})\/(?P<time>\d{1,10})\s+fields=(?P<fieldlist>[^\s]+)(\s+match=\/(?P<matchregex>.+)\/(\s+skip=(?P<skiplist>[^\s]+))?)?\s+action=(?P<action>[^\s]+)\s+message=(?P<message>.*)$')
+    # TODO: make action and message optional
+    def load_limiter_config(self, text):
+        patt = re.compile(
+            r'^limit\s+name=(?P<name>[^\s]+)\s+rate=(?P<max>\-?\d{1,10})\/(?P<time>\d{1,10})\s+fields=(?P<fieldlist>[^\s]+)(\s+match=\/(?P<matchregex>.+)\/(\s+skip=(?P<skiplist>[^\s]+))?)?\s+action=(?P<action>[^\s]+)\s+message=(?P<message>.*)$')
         limiters = []
-        lineno=0
+        lineno = 0
         for line in text.split('\n'):
-            lineno+=1
-            line=line.strip()
-            if line.startswith('#') or line.strip()=='':
+            lineno += 1
+            line = line.strip()
+            if line.startswith('#') or line.strip() == '':
                 continue
-            match= patt.match(line)
+            match = patt.match(line)
             if match is None:
-                self.logger.error('cannot parse limiter config line %s'%lineno)
+                self.logger.error('cannot parse limiter config line %s' % lineno)
                 continue
             gdict = match.groupdict()
             limiter = Limiter()
@@ -290,69 +294,66 @@ class RateLimitPlugin(ScannerPlugin):
                 limiter.skip = gdict['skiplist'].split(',')
             action = string_to_actioncode(gdict['action'])
             if action is None:
-                self.logger.error("Limiter config line %s : invalid action %s"%(lineno,gdict['action']))
-            limiter.action=action
-            limiter.message=gdict['message']
+                self.logger.error("Limiter config line %s : invalid action %s" % (lineno, gdict['action']))
+            limiter.action = action
+            limiter.message = gdict['message']
             limiters.append(limiter)
         return limiters
 
-
-    def examine(self,suspect):
+    def examine(self, suspect):
         if self.limiters is None:
-            filename=self.config.get(self.section,'limiterfile')
+            filename = self.config.get(self.section, 'limiterfile')
             if not os.path.exists(filename):
-                self.logger.error("Limiter config file %s not found"%filename)
+                self.logger.error("Limiter config file %s not found" % filename)
                 return
             with open(filename) as fp:
                 limiterconfig = fp.read()
-            self.limiters = self.load_limiter_config(limiterconfig) # type: list
+            self.limiters = self.load_limiter_config(limiterconfig)  # type: list
             # noinspection PyTypeChecker
-            self.logger.info("Found %s limiter configurations"%(len(self.limiters)))
+            self.logger.info("Found %s limiter configurations" % (len(self.limiters)))
 
         if self.backend_instance is None:
-            btype = self.config.get(self.section,'backendtype')
+            btype = self.config.get(self.section, 'backendtype')
             if btype not in AVAILABLE_RATELIMIT_BACKENDS:
-                self.logger.error('ratelimit backend %s not available'%(btype))
+                self.logger.error('ratelimit backend %s not available' % (btype))
                 return
-            self.backend_instance = AVAILABLE_RATELIMIT_BACKENDS[btype](self.config.get(self.section,'backendconfig'))
-
+            self.backend_instance = AVAILABLE_RATELIMIT_BACKENDS[btype](self.config.get(self.section, 'backendconfig'))
 
         skiplist = []
         # noinspection PyTypeChecker
         for limiter in self.limiters:
-            if limiter.name in skiplist: # check if this limiter is skipped by a previous one
-                self.logger.debug('limiter %s skipped due to previous match'%limiter.name)
+            if limiter.name in skiplist:  # check if this limiter is skipped by a previous one
+                self.logger.debug('limiter %s skipped due to previous match' % limiter.name)
                 continue
 
-            #get field values
-            allfieldsavailable=True
-            fieldvalues=[]
+            # get field values
+            allfieldsavailable = True
+            fieldvalues = []
             for fieldname in limiter.fields:
-                values = self.filter.get_field(suspect,fieldname)
-                if len(values)<1:
+                values = self.filter.get_field(suspect, fieldname)
+                if len(values) < 1:
                     allfieldsavailable = False
-                    self.logger.debug('Skipping limiter %s - field %s not available'%(limiter.name,fieldname))
+                    self.logger.debug('Skipping limiter %s - field %s not available' % (limiter.name, fieldname))
                     break
                 fieldvalues.append(values[0])
-            if not allfieldsavailable: #rate limit can not be applied
+            if not allfieldsavailable:  # rate limit can not be applied
                 continue
 
             checkval = ','.join(fieldvalues)
             if limiter.regex is not None:
-                if re.match(limiter.regex,checkval):
+                if re.match(limiter.regex, checkval):
                     if limiter.skip is not None:
                         skiplist.extend(limiter.skip)
-                else: #no match, skip this limiter
-                    self.logger.debug('Skipping limiter %s - regex does not match'%(limiter.name))
+                else:  # no match, skip this limiter
+                    self.logger.debug('Skipping limiter %s - regex does not match' % (limiter.name))
                     continue
-            #self.logger.debug("check %s"%str(limiter))
-            eventname = limiter.name+checkval
+            # self.logger.debug("check %s"%str(limiter))
+            eventname = limiter.name + checkval
             timespan = limiter.timespan
             lmax = limiter.max
-            if lmax < 0: #no limit
+            if lmax < 0:  # no limit
                 continue
-            event_count = self.backend_instance.check_count(eventname,timespan)
-            self.logger.debug("Limiter event %s  count: %s"%(eventname,event_count))
-            if event_count>lmax:
-                return limiter.action, apply_template( limiter.message, suspect)
-
+            event_count = self.backend_instance.check_count(eventname, timespan)
+            self.logger.debug("Limiter event %s  count: %s" % (eventname, event_count))
+            if event_count > lmax:
+                return limiter.action, apply_template(limiter.message, suspect)

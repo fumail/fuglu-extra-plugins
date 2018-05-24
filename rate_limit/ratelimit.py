@@ -335,7 +335,7 @@ class RateLimitPlugin(ScannerPlugin):
                     allfieldsavailable = False
                     self.logger.debug('Skipping limiter %s - field %s not available' % (limiter.name, fieldname))
                     break
-                fieldvalues.append(values[0])
+                fieldvalues.append(str(values[0]))
             if not allfieldsavailable:  # rate limit can not be applied
                 continue
 

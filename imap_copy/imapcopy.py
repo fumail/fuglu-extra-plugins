@@ -7,7 +7,7 @@ import imaplib
 if sys.version_info[0] == 2:
     from urlparse import urlparse
 if sys.version_info[0] >= 3:
-    from urllib import parse as urlparse
+    from urllib.parse import urlparse
 
 
 #TODO: reuse imap connections

@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from fuglu.shared import ScannerPlugin, DUNNO, string_to_actioncode, apply_template, FileList
 from fuglu.extensions.dnsquery import lookup, DNSQUERY_EXTENSION_ENABLED
+from fuglu.stringencode import force_bString
 import re
 import hashlib
 
@@ -118,9 +119,15 @@ class EBLLookup(ScannerPlugin):
     
     def _create_hash(self, value):
         hashtype = self.config.get(self.section,'hash').lower()
-        if hashtype in hashlib.algorithms:
+        
+        if hasattr(hashlib, 'algorithms_guaranteed'):
+            algorithms = hashlib.algorithms_guaranteed
+        else:
+            algorithms = ['md5', 'sha1'] #python 2.6
+        
+        if hashtype in algorithms:
             hasher = getattr(hashlib, hashtype)
-            myhash = hasher(value).hexdigest()
+            myhash = hasher(force_bString(value)).hexdigest()
         else:
             myhash = ''
         return myhash
@@ -205,9 +212,16 @@ class EBLLookup(ScannerPlugin):
         if not DNSQUERY_EXTENSION_ENABLED:
             print("no DNS resolver library available - this plugin will do nothing")
             lint_ok = False
+        
+        
+        if hasattr(hashlib, 'algorithms_guaranteed'):
+            algorithms = hashlib.algorithms_guaranteed
+        else:
+            algorithms = ['md5', 'sha1'] #python 2.6
+            print('old version of hashlib, consider upgrade')
             
         hashtype = self.config.get(self.section,'hash').lower()
-        if hashtype not in hashlib.algorithms:
+        if hashtype not in algorithms:
             lint_ok = False
             print('unsupported hash type %s' % hashtype)
             

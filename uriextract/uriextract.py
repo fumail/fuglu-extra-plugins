@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template,FileList
+from fuglu.stringencode import force_uString
 import unittest
 import logging
 import os
@@ -107,7 +108,7 @@ class URIExtract(ScannerPlugin):
             contenttype=part.get_content_type()
             
             if contenttype.startswith('text/') or fname.endswith(".txt") or fname.endswith(".html") or fname.endswith(".htm"):
-                payload=part.get_payload() # setting encode=True will return bytes in python3
+                payload=force_uString(part.get_payload(None,True))
                 if 'html' in contenttype or '.htm' in fname: #remove newlines from html so we get uris spanning multiple lines
                     payload=payload.replace('\n', '').replace('\r', '')
                 try:

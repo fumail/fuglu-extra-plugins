@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template,FileList
+from fuglu.stringencode import force_uString
 import os
 try:
     #py2
@@ -105,7 +106,12 @@ class URIExtract(ScannerPlugin):
             contenttype=part.get_content_type()
             
             if contenttype.startswith('text/') or fname.endswith(".txt") or fname.endswith(".html") or fname.endswith(".htm"):
-                payload=part.get_payload() # setting encode=True will return bytes in python3
+                payload=part.get_payload(None,True)
+                if payload is not None:
+                    # Try to decode using the given char set (or utf-8 by default)
+                    charset = part.get_content_charset("utf-8")
+                    payload = force_uString(payload,encodingGuess=charset)
+
                 if 'html' in contenttype or '.htm' in fname: #remove newlines from html so we get uris spanning multiple lines
                     payload=payload.replace('\n', '').replace('\r', '')
                 try:
@@ -116,7 +122,13 @@ class URIExtract(ScannerPlugin):
             
             if contenttype=='multipart/alternative':
                 try:
-                    text=str(part.get_payload(None,True))
+                    payload = part.get_payload(None,True)
+
+                    if payload is not None:
+                        # Try to decode using the given char set
+                        charset = part.get_content_charset("utf-8")
+                        text = force_uString(payload,encodingGuess=charset)
+
                     textparts.append(text)
                 except (UnicodeEncodeError, UnicodeDecodeError):
                     self.logger.debug('%s failed to convert alternative part to string' % suspect.id)

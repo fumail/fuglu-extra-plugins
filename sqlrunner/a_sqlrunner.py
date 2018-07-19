@@ -6,7 +6,7 @@ import string
 class SQLRunner(AppenderPlugin):
     """Run SQL statements after message scan is complete"""
     
-    def __init__(self,config,section):
+    def __init__(self,config,section=None):
         AppenderPlugin.__init__(self,config,section)
         self.logger=self._logger()
         

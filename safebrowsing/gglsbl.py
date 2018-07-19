@@ -83,6 +83,8 @@ class GGLSBLClient(object):
     def _convert(self, jsondata):
         data = u''
         try:
+            if isinstance(jsondata, bytes): # python3
+                jsondata = jsondata.decode('utf-8')
             data = json.loads(jsondata)
         except Exception as e:
             self.logger.error('data conversion failed: %s' % str(e))

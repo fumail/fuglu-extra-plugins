@@ -105,7 +105,7 @@ class RSpamdPlugin(ScannerPlugin):
         # - rspamd does not support gtube
         # - no lint function implemented in workers
         # - may only check tcp connection...
-        self._lint_gtube()
+        allok = allok and self._lint_gtube()
         return allok
     
     
@@ -120,7 +120,7 @@ class RSpamdPlugin(ScannerPlugin):
         
         os.remove(tmpfile)
         print(data)
-    
+        return (None not in data)    
     
     
     def rspamd_json(self, suspect):

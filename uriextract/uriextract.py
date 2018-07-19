@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from fuglu.shared import ScannerPlugin,DUNNO,string_to_actioncode,apply_template,FileList
 from fuglu.stringencode import force_uString
-import unittest
-import logging
 import os
 try:
     #py2
@@ -108,7 +106,12 @@ class URIExtract(ScannerPlugin):
             contenttype=part.get_content_type()
             
             if contenttype.startswith('text/') or fname.endswith(".txt") or fname.endswith(".html") or fname.endswith(".htm"):
-                payload=force_uString(part.get_payload(None,True))
+                payload=part.get_payload(None,True)
+                if payload is not None:
+                    # Try to decode using the given char set (or utf-8 by default)
+                    charset = part.get_content_charset("utf-8")
+                    payload = force_uString(payload,encodingGuess=charset)
+
                 if 'html' in contenttype or '.htm' in fname: #remove newlines from html so we get uris spanning multiple lines
                     payload=payload.replace('\n', '').replace('\r', '')
                 try:
@@ -119,7 +122,13 @@ class URIExtract(ScannerPlugin):
             
             if contenttype=='multipart/alternative':
                 try:
-                    text=str(part.get_payload(None,True))
+                    payload = part.get_payload(None,True)
+
+                    if payload is not None:
+                        # Try to decode using the given char set
+                        charset = part.get_content_charset("utf-8")
+                        text = force_uString(payload,encodingGuess=charset)
+
                     textparts.append(text)
                 except (UnicodeEncodeError, UnicodeDecodeError):
                     self.logger.debug('%s failed to convert alternative part to string' % suspect.id)
@@ -310,61 +319,3 @@ class DomainAction(ScannerPlugin):
         
         return allok
 
-
-######## TESTS ##############
-class URIExtractTest(unittest.TestCase):
-    def setUp(self):
-        section="URIExtract"
-        
-        tlds="com net org\n .co.uk ch ru"
-        open('/tmp/tld.txt','w').write(tlds)
-        
-        skiplist="skipme.com meetoo.com"
-        open('/tmp/domainskiplist.txt','w').write(skiplist)
-        
-        
-        config=ConfigParser.RawConfigParser()
-        config.add_section(section)
-        config.set(section, 'tldfiles', "/tmp/tld.txt")
-        config.set(section, 'domainskiplist', "/tmp/domainskiplist.txt")
-        self.candidate=URIExtract(config,section)
-        self.candidate._prepare()
-        
-    def tearDown(self):
-        pass
-    
-    def test_simple_text(self):
-        txt="""hello http://bla.com please click on <a href="www.co.uk">slashdot.org/?a=c&f=m</a> www.skipme.com www.skipmenot.com/ http://allinsurancematters.net/lurchwont/ muahahaha x.org"""
-        
-        uris=self.candidate.extractor.extracturis(txt)
-        self.assertTrue('http://bla.com' in uris)
-        self.assertTrue('www.co.uk' in uris)
-        self.assertTrue('slashdot.org/?a=c&f=m' in uris)
-        
-        self.assertTrue('www.skipmenot.com/' in uris)
-        #print(" ".join(uris))
-        self.assertTrue("skipme.com" not in " ".join(uris))
-        
-        self.assertTrue("http://allinsurancematters.net/lurchwont/" in uris)
-        self.assertTrue("x.org" in uris,'rule at the end not found')
-        
-    def test_dotquad(self):
-        txt="""click on 1.2.3.4 or http://62.2.17.61/ or https://8.8.8.8/bla.com """
-        
-        uris=self.candidate.extractor.extracturis(txt)
-        self.assertTrue('1.2.3.4' in uris)
-        self.assertTrue('http://62.2.17.61/' in uris)
-        self.assertTrue('https://8.8.8.8/bla.com' in uris)
-        
-    def test_uppercase(self):
-        txt="""hello http://BLa.com please click"""
-        uris=self.candidate.extractor.extracturis(txt)
-        self.assertTrue('http://bla.com' not in uris,'uris should not be lowercased')
-        self.assertTrue('http://BLa.com' in uris,'uri with uppercase not found')
-        
-    def test_url_without_file(self):
-        txt="""lol http://roasty.familyhealingassist.ru?coil&commission blubb"""
-        uris=self.candidate.extractor.extracturis(txt)
-        self.assertTrue('http://roasty.familyhealingassist.ru?coil&commission' in uris,'did not find uri, result was %s'%uris)
-        
-# TEST : postcat-eml.sh testdata/03E49500578 | plugdummy.py -p ~/workspace/fuglu-plugins-cm/extractors/ -e - uriextract.URIExtract uriextract.DomainAction 

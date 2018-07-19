@@ -112,36 +112,33 @@ class URIExtractTest(unittest.TestCase):
 
         self.assertTrue('www.co.uk' in uris)
 
-    #--                                        --#
-    #- CURRENTLY FAILING BACAUSE OF DOMAINMAGIC -#
-    #--                                        --#
+    def test_unquoted_link(self):
+        """Test unquoted href attribute"""
+        txt="""hello  <a href=www.co.uk>slashdot.org/?a=c&f=m</a> """
 
-    # def test_unquoted_link(self):
-    #     """Test unquoted href attribute"""
-    #     txt="""hello  <a href=www.co.uk>slashdot.org/?a=c&f=m</a> """
-    #
-    #     uris=self.candidate.extractor.extracturis(txt)
-    #     self.assertTrue('www.co.uk' in uris)
-    #     self.assertTrue('slashdot.org/?a=c&f=m' in uris)
-    #
-    # def test_withSuspect(self):
-    #     """Test unquoted href attribute in html part of mail"""
-    #     myclass = self.__class__.__name__
-    #     functionNameAsString = sys._getframe().f_code.co_name
-    #     loggername = "%s.%s" % (myclass,functionNameAsString)
-    #     logger = logging.getLogger(loggername)
-    #
-    #     logger.debug("Read file content")
-    #     filecontent = BytesIO(mail_html).read()
-    #
-    #     logger.debug("Create suspect")
-    #     suspect = Suspect("auth@aaaaaa.aa","rec@aaaaaaa.aa","/dev/null")
-    #     suspect.set_source(filecontent)
-    #
-    #     logger.debug("examine suspect")
-    #     self.candidate.examine(suspect)
-    #
-    #     uris = suspect.get_tag('body.uris')
-    #     logger.debug('uris: '+",".join(uris))
-    #
+        uris=self.candidate.extractor.extracturis(txt)
+        self.assertTrue('www.co.uk' in uris)
+        self.assertTrue('slashdot.org/?a=c&f=m' in uris)
+
+    def test_withSuspect(self):
+        """Test unquoted href attribute in html part of mail"""
+        myclass = self.__class__.__name__
+        functionNameAsString = sys._getframe().f_code.co_name
+        loggername = "%s.%s" % (myclass,functionNameAsString)
+        logger = logging.getLogger(loggername)
+
+        logger.debug("Read file content")
+        filecontent = BytesIO(mail_html).read()
+
+        logger.debug("Create suspect")
+        suspect = Suspect("auth@aaaaaa.aa","rec@aaaaaaa.aa","/dev/null")
+        suspect.set_source(filecontent)
+
+        logger.debug("examine suspect")
+        self.candidate.examine(suspect)
+
+        uris = suspect.get_tag('body.uris')
+        logger.debug('uris: '+",".join(uris))
+        self.assertTrue( "http://toBeDetected.com.br/Jul2018/En/Statement/Invoice-DDDDDDDDD-DDDDDD/" in uris)
+
 

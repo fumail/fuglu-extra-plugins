@@ -157,8 +157,14 @@ class SenderRewriteScheme(ScannerPlugin):
             new_hdr = '<%s>' % to_address
             
         msgrep['To'] = new_hdr
-        suspect.set_message_rep(msgrep)
-    
+        # no need to reset attachment manager because of a header change
+        try:
+            # current fuglu version
+            suspect.set_message_rep(msgrep,reset_attMgr=False)
+        except TypeError:
+            # backward compatibility
+            suspect.set_message_rep(msgrep)
+
     
     
     def examine(self, suspect):

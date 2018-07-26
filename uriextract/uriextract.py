@@ -89,9 +89,43 @@ class URIExtract(ScannerPlugin):
     
     def examine(self,suspect):
         return self._run(suspect)
-    
-    
-    def get_decoded_textparts(self, suspect):
+
+    def get_decoded_textparts(self, suspect,bcompatible=True):
+        """bcompatible True will work with FUGLU version before implementation of attachment manager in Suspect """
+        textparts = []
+
+        try:
+            attMgr = suspect.attMgr
+        except AttributeError:
+            message = 'This version of URIextract is supposed to use a FUGLU version with Attachment Manager. \n' \
+                      'Please update your FUGLU version'
+            if bcompatible:
+                self.logger.warning(message)
+            else:
+                raise AttributeError(message)
+            return self.get_decoded_textparts_deprecated(suspect)
+
+        for attObj in attMgr.get_objectlist():
+            if attObj.content_fname_check(contenttype_start="text/") \
+                    or attObj.content_fname_check(name_end=(".txt", ".html", ".htm")):
+                decoded_payload = attObj.decoded_buffer_text
+
+                if attObj.content_fname_check(contenttype_contains="html") \
+                        or attObj.content_fname_check(name_contains=".htm"):
+                    decoded_payload=decoded_payload.replace(u'\n', u'').replace(u'\r', u'')
+
+                try:
+                    decoded_payload = self.htmlparser.unescape(decoded_payload)
+                except Exception:
+                    self.logger.debug('%s failed to unescape html entities' % suspect.id)
+
+                textparts.append(decoded_payload)
+
+            if attObj.content_fname_check(contenttype="multipart/alternative"):
+                textparts.append(attObj.decoded_buffer_text)
+        return textparts
+
+    def get_decoded_textparts_deprecated(self, suspect):
         """Returns a list of all text contents"""
         messagerep = suspect.get_message_rep()
         

@@ -142,3 +142,21 @@ class URIExtractTest(unittest.TestCase):
         self.assertTrue( "http://toBeDetected.com.br/Jul2018/En/Statement/Invoice-DDDDDDDDD-DDDDDD/" in uris)
 
 
+    def test_withSuspect_newDecode(self):
+        """Test if new version of URIExtract gives same result as old one"""
+        myclass = self.__class__.__name__
+        functionNameAsString = sys._getframe().f_code.co_name
+        loggername = "%s.%s" % (myclass,functionNameAsString)
+        logger = logging.getLogger(loggername)
+
+        logger.debug("Read file content")
+        filecontent = BytesIO(mail_html).read()
+
+        logger.debug("Create suspect")
+        suspect = Suspect("auth@aaaaaa.aa","rec@aaaaaaa.aa","/dev/null")
+        suspect.set_source(filecontent)
+
+        textparts_deprecated = self.candidate.get_decoded_textparts_deprecated(suspect)
+        textparts            = self.candidate.get_decoded_textparts(suspect,bcompatible=False)
+
+        self.assertEqual(textparts_deprecated,textparts)

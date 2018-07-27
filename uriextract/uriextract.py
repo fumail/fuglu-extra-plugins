@@ -95,7 +95,7 @@ class URIExtract(ScannerPlugin):
         textparts = []
 
         try:
-            attMgr = suspect.attMgr
+            att_mgr = suspect.att_mgr
         except AttributeError:
             message = 'This version of URIextract is supposed to use a FUGLU version with Attachment Manager. \n' \
                       'Please update your FUGLU version'
@@ -105,7 +105,7 @@ class URIExtract(ScannerPlugin):
                 raise AttributeError(message)
             return self.get_decoded_textparts_deprecated(suspect)
 
-        for attObj in attMgr.get_objectlist():
+        for attObj in att_mgr.get_objectlist():
             if attObj.content_fname_check(contenttype_start="text/") \
                     or attObj.content_fname_check(name_end=(".txt", ".html", ".htm")):
                 decoded_payload = attObj.decoded_buffer_text

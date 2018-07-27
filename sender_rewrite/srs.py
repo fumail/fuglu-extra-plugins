@@ -160,7 +160,7 @@ class SenderRewriteScheme(ScannerPlugin):
         # no need to reset attachment manager because of a header change
         try:
             # current fuglu version
-            suspect.set_message_rep(msgrep,reset_attMgr=False)
+            suspect.set_message_rep(msgrep,att_mgr_reset=False)
         except TypeError:
             # backward compatibility
             suspect.set_message_rep(msgrep)

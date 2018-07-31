@@ -5,9 +5,12 @@ import logging
 import sys
 from io import BytesIO
 
-from uriextract.uriextract import URIExtract
+from uriextract.uriextract import URIExtract, EmailExtract
 from testing.storedmails import mail_html, mail_base64
 from fuglu.shared import Suspect
+import email
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 try:
     from unittest.mock import patch, mock_open
@@ -160,3 +163,121 @@ class URIExtractTest(unittest.TestCase):
         textparts            = self.candidate.get_decoded_textparts(suspect,bcompatible=False)
 
         self.assertEqual(textparts_deprecated,textparts)
+
+class EmailExtractTest(unittest.TestCase):
+    """Test email address extraction"""
+
+    def setUp(self):
+        section="EmailExtract"
+
+        tlds="com net org\n .co.uk ch ru"
+        open('/tmp/tld.txt','w').write(tlds)
+
+        skiplist="skipme.com meetoo.com"
+        open('/tmp/domainskiplist.txt','w').write(skiplist)
+
+
+        config=ConfigParser.RawConfigParser()
+        config.add_section(section)
+        config.set(section, 'tldfiles', "/tmp/tld.txt")
+        config.set(section, 'domainskiplist', "/tmp/domainskiplist.txt")
+        config.set(section, 'maxsize', 10485000)
+        config.set(section, 'loguris', 'no')
+
+        config.set(section, 'headers', 'Return-Path,Reply-To,From,X-RocketYMMF,X-Original-Sender,Sender,X-Originating-Email,Envelope-From,Disposition-Notification-To')
+        config.set(section, 'skipheaders', 'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To')
+
+        self.candidate=EmailExtract(config,section)
+        self.candidate._prepare()
+
+    def test_withSuspect(self):
+        """Test email address extraction"""
+
+        # for testing, collect all addresses that should be found
+        address2befound = []
+
+        # me == my email address
+        # you == recipient's email address
+        me = "my@tobefound.com"
+        address2befound.append(me)
+
+        you = "your@tobeskipped.com"
+
+        # Create message container - the correct MIME type is multipart/alternative.
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = "mail address"
+        msg['From'] = me
+        msg['To'] = you
+
+        # Create the body of the message (a plain-text and an HTML version).
+        addr = "webmaster@findmeintext.com"
+        address2befound.append(addr)
+        text = "Hi!\nHow are you?\nHere is the link you wanted:\n" \
+               "https://www.python.org\nAnd here's the address:\n%s."%addr
+
+        addr = "webmaster@findmeinhtml.com"
+        html = u"""\                                                                                     
+        <html>                                                                                           
+          <head></head>                                                                                  
+          <body>                                                                                         
+            <p>Hi!<br>                                                                                   
+               How are you?<br>                                                                          
+               Here is the <a href="https://www.python.org">link</a> you wanted.<br>       
+               And here's the <a href="mailto:%s"> mail address</a>.<br>
+            </p>                                                                                         
+          </body>                                                                                        
+        </html>                                                                                          
+        """%addr
+        address2befound.append(addr)
+
+        # Record the MIME types of both parts - text/plain and text/html.
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(html, 'html',_charset="UTF-8")
+
+        msg.attach(part1)
+        msg.attach(part2)
+
+        headerlist = ['Return-Path', 'Reply-To', 'From', 'X-RocketYMMF', 'X-Original-Sender', 'Sender',
+                      'X-Originating-Email', 'Envelope-From', 'Disposition-Notification-To']
+        for hdr in headerlist:
+            addr = hdr.lower()+"@tobefound.com"
+            msg[hdr] = addr
+            address2befound.append(addr)
+            print("New/changed header to be found %s: %s"%(hdr,msg[hdr]))
+
+        skipheaderlist = ['X-Original-To', 'Delivered-To', 'X-Delivered-To,' 'Apparently-To', 'X-Apparently-To']
+        for hdr in skipheaderlist:
+            msg[hdr] = hdr.lower()+"@tobeskipped.com"
+            print("New/changed header to be skipped %s: %s"%(hdr,msg[hdr]))
+
+        print("Create suspect")
+        suspect = Suspect("auth@aaaaaa.aa","rec@aaaaaaa.aa","/dev/null")
+
+        try:
+            suspect.set_source(msg.as_bytes())
+        except AttributeError:
+            suspect.set_source(msg.as_string())
+
+        print("Examine suspect")
+        self.candidate.examine(suspect)
+
+        emailaddresses = suspect.get_tag('emails')
+        print('email addresses found: '+",".join(emailaddresses))
+
+        missing = []
+        for addr in address2befound:
+            if addr in emailaddresses:
+                print("Found: %s"%addr)
+            else:
+                print("DID NOT FIND: %s"%addr)
+                missing.append(addr)
+
+        over = []
+        for addr in emailaddresses:
+            if addr not in address2befound:
+                print("DID FIND ADDRESS WHICH SHOULD NOT BE FOUND: %s"%addr)
+                over.append(addr)
+
+        self.assertEqual(0,len(missing),"Not all mail addresses detected! Missing:\n[%s]\n\n"%", ".join(missing))
+        self.assertEqual(0,len(over),"Found addresses that should be skipped! List is:\n[%s]\n\n"%", ".join(over))
+

@@ -186,7 +186,9 @@ class EmailExtract(URIExtract):
     def __init__(self,config,section=None):
         URIExtract.__init__(self,config,section)
         self.logger = self._logger()
-        self.requiredvars = {
+
+        # update the requiredvars dictionary inherited from URIExtract by additional values for EmailExtract
+        self.requiredvars.update({
             'headers': {
                 'default':'Return-Path,Reply-To,From,X-RocketYMMF,X-Original-Sender,Sender,X-Originating-Email,Envelope-From,Disposition-Notification-To', 
                 'description':'comma separated list of headers to check for adresses to extract'
@@ -196,7 +198,7 @@ class EmailExtract(URIExtract):
                 'default':'X-Original-To,Delivered-To,X-Delivered-To,Apparently-To,X-Apparently-To',
                 'description':'comma separated list of headers with email adresses that should be skipped in body search'
             },
-        }
+        })
     
     
     def _run(self,suspect):
@@ -213,7 +215,7 @@ class EmailExtract(URIExtract):
 
         textparts=" ".join(self.get_decoded_textparts(suspect))
         for hdr in self.config.get(self.section,'headers').split(','):
-            textparts+=" ".join(suspect.get_message_rep().get_all(hdr,""))
+            textparts+=" " + " ".join(suspect.get_message_rep().get_all(hdr,""))
 
         foundemails=self.extractor.extractemails(textparts)
 

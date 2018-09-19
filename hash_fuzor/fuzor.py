@@ -20,6 +20,10 @@ class FuzorReport(ScannerPlugin):
                 'default': 'localhost:6379:0',
                 'description': 'redis config: host:port:db',
             },
+            'redispw':{
+                'default':'',
+                'description':'password to connect to redis database. leave empty for no password',
+            },
             'ttl': {
                 'default': '604800',
                 'description': 'hash ttl in seconds',
@@ -43,10 +47,12 @@ class FuzorReport(ScannerPlugin):
         if self.backend is not None:
             return
         host, port, db = self.config.get(self.section, 'redis').split(':')
+        password = self.config.get(self.section, 'redispw') or None
         red = redis.StrictRedis(
             host=host,
             port=port,
             db=int(db),
+            password=password,
             socket_timeout=self.config.getint(self.section, 'timeout'))
         self.backend = RedisBackend(red)
         self.backend.ttl = self.config.getint(self.section, 'ttl')
